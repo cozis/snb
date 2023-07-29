@@ -44,16 +44,16 @@ int UTF8ToUTF32(const char *utf8_data, int nbytes, uint32_t *utf32_code)
     if(utf8_data[0] & 0x80) {
 
         // May be UTF-8.
-            
+
         if((unsigned char) utf8_data[0] >= 0xF0) {
             // 4 bytes.
             // 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
 
             if(nbytes < 4)
                 return -1;
-                    
-            uint32_t temp 
-                = (((uint32_t) utf8_data[0] & 0x07) << 18) 
+
+            uint32_t temp
+                = (((uint32_t) utf8_data[0] & 0x07) << 18)
                 | (((uint32_t) utf8_data[1] & 0x3f) << 12)
                 | (((uint32_t) utf8_data[2] & 0x3f) <<  6)
                 | (((uint32_t) utf8_data[3] & 0x3f));
@@ -64,7 +64,7 @@ int UTF8ToUTF32(const char *utf8_data, int nbytes, uint32_t *utf32_code)
             *utf32_code = temp;
             return 4;
         }
-            
+
         if((unsigned char) utf8_data[0] >= 0xE0) {
             // 3 bytes.
             // 1110xxxx 10xxxxxx 10xxxxxx
@@ -76,14 +76,14 @@ int UTF8ToUTF32(const char *utf8_data, int nbytes, uint32_t *utf32_code)
                 = (((uint32_t) utf8_data[0] & 0x0f) << 12)
                 | (((uint32_t) utf8_data[1] & 0x3f) <<  6)
                 | (((uint32_t) utf8_data[2] & 0x3f));
-                    
+
             if(temp > 0x10ffff)
                 return -1;
 
             *utf32_code = temp;
             return 3;
         }
-            
+
         if((unsigned char) utf8_data[0] >= 0xC0) {
             // 2 bytes.
             // 110xxxxx 10xxxxxx
@@ -91,14 +91,14 @@ int UTF8ToUTF32(const char *utf8_data, int nbytes, uint32_t *utf32_code)
             if(nbytes < 2)
                 return -1;
 
-            *utf32_code 
+            *utf32_code
                 = (((uint32_t) utf8_data[0] & 0x1f) << 6)
                 | (((uint32_t) utf8_data[1] & 0x3f));
-                    
+
             assert(*utf32_code <= 0x10ffff);
             return 2;
         }
-        
+
         return -1;
     }
 
@@ -109,12 +109,12 @@ int UTF8ToUTF32(const char *utf8_data, int nbytes, uint32_t *utf32_code)
     return 1;
 }
 
-static float 
+static float
 renderString(Font font, const char *str, size_t len,
-             int off_x, int off_y, float font_size, 
+             int off_x, int off_y, float font_size,
              Color tint)
 {
-    if (font.texture.id == 0) 
+    if (font.texture.id == 0)
         font = GetFontDefault();
 
     int   y = off_y;
@@ -141,7 +141,7 @@ renderString(Font font, const char *str, size_t len,
 
         if (codepoint != ' ' && codepoint != '\t') {
             Vector2 position = {x, y};
-            DrawTextCodepoint(font, codepoint, position, 
+            DrawTextCodepoint(font, codepoint, position,
                               font_size, tint);
         }
 
@@ -149,7 +149,7 @@ renderString(Font font, const char *str, size_t len,
         int advance_x = font.glyphs[glyph_index].advanceX;
         if (advance_x == 0)
             delta = (float) font.recs[glyph_index].width * scale + spacing;
-        else 
+        else
             delta = (float) advance_x * scale + spacing;
 
         x += delta;
@@ -159,11 +159,11 @@ renderString(Font font, const char *str, size_t len,
     return w;
 }
 
-static float 
+static float
 calculateStringRenderWidth(Font font, int font_size,
                            const char *str, size_t len)
 {
-    if (font.texture.id == 0) 
+    if (font.texture.id == 0)
         font = GetFontDefault();
 
     float scale = (float) font_size / font.baseSize;
@@ -195,11 +195,11 @@ calculateStringRenderWidth(Font font, int font_size,
     return w;
 }
 
-static void 
-drawBufferContents(GapBuffer *gap, Font font, 
+static void
+drawBufferContents(GapBuffer *gap, Font font,
                    size_t cursor)
 {
-    float font_size = 24;        
+    float font_size = 24;
     float line_h = font_size+4;
     float cursor_w = 3;
     Color cursor_color = RED;
@@ -215,9 +215,9 @@ drawBufferContents(GapBuffer *gap, Font font,
     size_t line_count = 0;
     bool drew_cursor = false;
     while (GapBufferIter_next(&iter, &line)) {
-            
-        float line_w = renderString(font, line.str, line.len, 
-                                    line_x, line_y, font_size, 
+
+        float line_w = renderString(font, line.str, line.len,
+                                    line_x, line_y, font_size,
                                     font_color);
 
         if (cursor >= line_offset && cursor <= line_offset + line.len) {
@@ -251,7 +251,7 @@ void manageEvents(GapBuffer *gap, size_t *cursor)
             case KEY_RIGHT:
             *cursor = GapBuffer_moveRelative(gap, 1);
             break;
-            
+
             case KEY_ENTER:
             if (GapBuffer_insertString(gap, "\n", 1))
                 (*cursor)++;
@@ -312,6 +312,13 @@ ouch:
     return false;
 }
 
+void drawRuler(Font font, int ruler_width, Color color) {
+    int font_size = 24;
+    float font_width = MeasureTextEx(font, "A", font_size, 0).x;
+    int x = ruler_width * font_width;
+    DrawLine(x, 0, x, GetScreenHeight(), color);
+}
+
 int main(int argc, char **argv)
 {
     char mem[1 << 16];
@@ -340,6 +347,7 @@ int main(int argc, char **argv)
         BeginDrawing();
         ClearBackground(WHITE);
         drawBufferContents(gap, font, cursor);
+        drawRuler(font, 80, GRAY);
         EndDrawing();
     }
 
