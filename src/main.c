@@ -55,13 +55,6 @@ void manageEvents(GapBuffer *gap, BufferViewStyle *style)
     }
 }
 
-void drawRuler(Font font, int ruler_width, Color color) {
-    int font_size = 24;
-    float font_width = MeasureTextEx(font, "A", font_size, 0).x;
-    int x = ruler_width * font_width;
-    DrawLine(x, 0, x, GetScreenHeight(), color);
-}
-
 int main(int argc, char **argv)
 {
     char mem[1 << 16];
@@ -81,8 +74,10 @@ int main(int argc, char **argv)
     BufferViewStyle buff_view_style = {
         .line_h = 1,
         .cursor_w = 3,
+        .ruler_x = 80,
         .color_cursor = RED,
         .color_text = BLACK,
+        .color_ruler = GRAY,
         .font_path = "SourceCodePro-Regular.ttf",
         .font_size = 24,
     };
@@ -101,7 +96,6 @@ int main(int argc, char **argv)
         BeginDrawing();
         ClearBackground(WHITE);
         drawBufferView(&buff_view);
-        drawRuler(font, 80, GRAY);
         EndDrawing();
     }
 

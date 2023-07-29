@@ -205,6 +205,13 @@ static void reloadStyleIfChanged(BufferView *bufview)
     }
 }
 
+static void drawRuler(Font font, int font_size, int ruler_width, Color color) 
+{
+    float font_width = MeasureTextEx(font, "A", font_size, 0).x;
+    int x = ruler_width * font_width;
+    DrawLine(x, 0, x, GetScreenHeight(), color);
+}
+
 void drawBufferView(BufferView *bufview)
 {
     reloadStyleIfChanged(bufview);
@@ -212,13 +219,17 @@ void drawBufferView(BufferView *bufview)
     float font_size    = bufview->style->font_size;
     float line_h       = bufview->style->line_h * font_size;
     float cursor_w     = bufview->style->cursor_w;
+    float ruler_x      = bufview->style->ruler_x;
     Color cursor_color = bufview->style->color_cursor;
     Color   font_color = bufview->style->color_text;
+    Color  ruler_color = bufview->style->color_ruler;
 
     Font      font = bufview->loaded_font;
     GapBuffer *gap = bufview->gap;
     
     size_t cursor = GapBuffer_rawCursorPosition(gap);
+
+    drawRuler(font, font_size, ruler_x, ruler_color);
 
     GapBufferLine line;
     GapBufferIter iter;

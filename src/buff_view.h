@@ -4,8 +4,10 @@
 typedef struct {
     float line_h;
     float cursor_w;
+    float ruler_x;
     Color color_cursor;
     Color color_text;
+    Color color_ruler;
     const char *font_path;
     float       font_size;
 } BufferViewStyle;
