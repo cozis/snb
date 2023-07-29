@@ -1,0 +1,22 @@
+1. un text buffer super plain
+    - aprire file
+    - salvare file
+    - editare
+    - linea verticale che indica un riferimento nelle colonne (tipo 80 caratteri)
+    - scrolling
+
+2.
+    - copia/incolla
+    - selezione
+
+3.
+    - syntax highlighting
+
+4.
+    - undo/redo
+
+5. 
+    - tree view
+    - split view
+6.
+    - "apri con snb"
