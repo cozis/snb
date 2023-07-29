@@ -315,13 +315,8 @@ ouch:
 void drawRuler(Font font, int ruler_width, Color color) {
     int font_size = 24;
     float font_width = MeasureTextEx(font, "A", font_size, 0).x;
-
-    int screen_width = GetScreenWidth();
-    int screen_height = GetScreenHeight();
-
-    int visible_chars =  screen_width / font_width;
     int x = ruler_width * font_width;
-    DrawLine(x, 0, x, screen_height, color);
+    DrawLine(x, 0, x, GetScreenHeight(), color);
 }
 
 int main(int argc, char **argv)
