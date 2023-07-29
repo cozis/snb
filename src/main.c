@@ -160,8 +160,7 @@ renderString(Font font, const char *str, size_t len,
 }
 
 static float 
-calculateStringRenderWidth(Font font, int font_size,
-                           const char *str, size_t len)
+stringRenderWidth(Font font, int font_size, const char *str, size_t len)
 {
     if (font.texture.id == 0) 
         font = GetFontDefault();
@@ -221,7 +220,7 @@ drawBufferContents(GapBuffer *gap, Font font,
                                     font_color);
 
         if (cursor >= line_offset && cursor <= line_offset + line.len) {
-            int relative_cursor_x = calculateStringRenderWidth(font, font_size, line.str, cursor - line_offset);
+            int relative_cursor_x = stringRenderWidth(font, font_size, line.str, cursor - line_offset);
             DrawRectangle(line_x + relative_cursor_x, line_y, cursor_w, line_h, cursor_color);
             drew_cursor = true;
             line_w += cursor_w;
@@ -332,7 +331,7 @@ int main(int argc, char **argv)
     SetTargetFPS(60);
     InitWindow(720, 500, "SNB");
 
-    Font font = LoadFont("SourceCodePro-Regular.ttf");
+    Font font = LoadFontEx("SourceCodePro-Regular.ttf", 24, NULL, 250);
 
     size_t cursor = 0;
     while (!WindowShouldClose()) {
