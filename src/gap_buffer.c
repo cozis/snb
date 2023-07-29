@@ -24,6 +24,11 @@ struct GapBuffer {
     char   data[];
 };
 
+size_t GapBuffer_rawCursorPosition(GapBuffer *buff)
+{
+    return buff->gap_offset;
+}
+
 PRIVATE size_t getByteCount(GapBuffer *buff)
 {
     return buff->total - buff->gap_length;
