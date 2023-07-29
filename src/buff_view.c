@@ -210,7 +210,7 @@ void drawBufferView(BufferView *bufview)
     reloadStyleIfChanged(bufview);
 
     float font_size    = bufview->style->font_size;
-    float line_h       = bufview->style->line_h;
+    float line_h       = bufview->style->line_h * font_size;
     float cursor_w     = bufview->style->cursor_w;
     Color cursor_color = bufview->style->color_cursor;
     Color   font_color = bufview->style->color_text;
