@@ -1,11 +1,12 @@
-1. un text buffer super plain
-    - aprire file
-    - salvare file
+1. un text buffer super plain con gap buffer
+    - aprire file (col dialog e "apri con")
+    - salvare file (col dialog)
     - editare
     - linea verticale che indica un riferimento nelle colonne (tipo 80 caratteri)
     - scrolling
 
 2.
+    - ctrl+backspace e ctrl+del (del=canc) per eliminare parole
     - copia/incolla
     - selezione
 
@@ -18,5 +19,3 @@
 5. 
     - tree view
     - split view
-6.
-    - "apri con snb"

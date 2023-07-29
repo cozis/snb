@@ -4,64 +4,6 @@
 #include <raylib.h>
 #include "gap_buffer.h"
 
-#define MAX_WIDGETS 32
-
-typedef enum {
-    WIDGET_TEXTBUFFER,
-    WIDGET_SPLITVIEW,
-} WidgetType;
-
-typedef struct Widget Widget;;
-
-typedef struct {
-} SplitView;
-
-typedef struct {
-} TextBuffer;
-
-struct Widget {
-    WidgetType type;
-    union {
-        Widget *next;
-        SplitView  splitview;
-        TextBuffer textbuffer;
-    };
-};
-
-static Widget *free_widgets;
-static Widget widget_pool[MAX_WIDGETS];
-
-Widget *alloc_widget_mem(void)
-{
-    Widget *w;
-    if (free_widgets) {
-        w = free_widgets;
-        free_widgets = free_widgets->next;
-    } else
-        w = NULL;
-    return w;
-}
-
-void free_widget_mem(Widget *w)
-{
-    assert(w);
-    w->next = free_widgets;
-    free_widgets = w;
-}
-
-void init_widget_pool(void)
-{
-    free_widgets = widget_pool;
-    for (int i = 0; i < MAX_WIDGETS-1; i++)
-        widget_pool[i].next = &widget_pool[i];
-    widget_pool[MAX_WIDGETS-1].next = NULL;
-}
-
-void free_widget_pool(void)
-{
-}
-
-
 // https://stackoverflow.com/questions/42012563/convert-unicode-code-points-to-utf-8-and-utf-32
 static size_t codeToUTF8(unsigned char *const buffer, const unsigned int code)
 {
@@ -253,12 +195,138 @@ calculateStringRenderWidth(Font font, int font_size,
     return w;
 }
 
-int main(void)
+static void 
+drawBufferContents(GapBuffer *gap, Font font, 
+                   size_t cursor)
+{
+    float font_size = 24;        
+    float line_h = font_size+4;
+    float cursor_w = 3;
+    Color cursor_color = RED;
+    Color   font_color = BLACK;
+
+    GapBufferLine line;
+    GapBufferIter iter;
+    GapBufferIter_init(&iter, gap);
+
+    int line_x = 0;
+    int line_y = 0;
+    size_t line_offset = 0;
+    size_t line_count = 0;
+    bool drew_cursor = false;
+    while (GapBufferIter_next(&iter, &line)) {
+            
+        float line_w = renderString(font, line.str, line.len, 
+                                    line_x, line_y, font_size, 
+                                    font_color);
+
+        if (cursor >= line_offset && cursor <= line_offset + line.len) {
+            int relative_cursor_x = calculateStringRenderWidth(font, font_size, line.str, cursor - line_offset);
+            DrawRectangle(line_x + relative_cursor_x, line_y, cursor_w, line_h, cursor_color);
+            drew_cursor = true;
+            line_w += cursor_w;
+        }
+
+        line_y += line_h;
+        line_offset += line.len + 1;
+        line_count++;
+    }
+    GapBufferIter_free(&iter);
+
+    if (!drew_cursor) {
+        DrawRectangle(line_x, line_y, cursor_w, line_h, cursor_color);
+        line_count++;
+    }
+}
+
+void manageEvents(GapBuffer *gap, size_t *cursor)
+{
+    for (int key; (key = GetKeyPressed()) > 0;) {
+        switch (key) {
+
+            case KEY_LEFT:
+            *cursor = GapBuffer_moveRelative(gap, -1);
+            break;
+
+            case KEY_RIGHT:
+            *cursor = GapBuffer_moveRelative(gap, 1);
+            break;
+            
+            case KEY_ENTER:
+            if (GapBuffer_insertString(gap, "\n", 1))
+                (*cursor)++;
+            else
+                fprintf(stderr, "Couldn't insert string\n");
+            break;
+
+            case KEY_BACKSPACE:
+            if (*cursor > 0)
+                *cursor -= GapBuffer_removeBackwards(gap, 1);
+            break;
+        }
+    }
+
+    for (int code; (code = GetCharPressed()) > 0;) {
+
+        char temp[4];
+        size_t num;
+
+        num = codeToUTF8((unsigned char*) temp, code);
+        bool ok = GapBuffer_insertString(gap, temp, num);
+        if (ok)
+            *cursor += num;
+        else
+            fprintf(stderr, "Couldn't insert string\n");
+    }
+}
+
+bool load_file(const char *file, GapBuffer *gap)
+{
+    FILE *stream = fopen(file, "rb");
+    if (stream == NULL)
+        return false;
+
+    char buffer[1024];
+    for (bool done = false; !done;) {
+        size_t num = fread(buffer, sizeof(buffer[0]), sizeof(buffer), stream);
+        if (num < sizeof(buffer)) {
+            if (ferror(stream))
+                goto ouch; // Failed to read from stream
+            done = true;
+        }
+        bool ok = GapBuffer_insertString(gap, buffer, num);
+        if (!ok)
+            // NOTE: It's possible to have a failure because
+            //       the buffer doesn't contain valid utf-8
+            //       when a multi-byte symbol is truncated
+            //       while reading into the fixed-size buffer.
+            goto ouch; // File too big or invalid utf-8
+    }
+    GapBuffer_moveAbsolute(gap, 0);
+
+    fclose(stream);
+    return true;
+
+ouch:
+    fclose(stream);
+    return false;
+}
+
+int main(int argc, char **argv)
 {
     char mem[1 << 16];
     GapBuffer *gap = GapBuffer_createUsingMemory(mem, sizeof(mem), NULL);
     if (gap == NULL)
         return -1;
+
+    if (argc > 1) {
+        const char *file = argv[1];
+        if (!load_file(file, gap)) {
+            fprintf(stderr, "Failed to load '%s'\n", file);
+            return -1;
+        }
+        fprintf(stderr, "Loaded '%s'\n", file);
+    }
 
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     SetTargetFPS(60);
@@ -268,91 +336,14 @@ int main(void)
 
     size_t cursor = 0;
     while (!WindowShouldClose()) {
-
-        for (int key; (key = GetKeyPressed()) > 0;) {
-            switch (key) {
-                case KEY_LEFT:
-                cursor = GapBuffer_moveRelative(gap, -1);
-                break;
-
-                case KEY_RIGHT:
-                cursor = GapBuffer_moveRelative(gap, 1);
-                break;
-                
-                case KEY_ENTER:
-                if (GapBuffer_insertString(gap, "\n", 1))
-                    cursor++;
-                else
-                    fprintf(stderr, "Couldn't insert string\n");
-                break;
-
-                case KEY_BACKSPACE:
-                if (cursor > 0)
-                    cursor -= GapBuffer_removeBackwards(gap, 1);
-                break;
-            }
-        }
-
-        for (int code; (code = GetCharPressed()) > 0;) {
-
-            char temp[4];
-            size_t num;
-
-            num = codeToUTF8((unsigned char*) temp, code);
-            bool ok = GapBuffer_insertString(gap, temp, num);
-            if (ok)
-                cursor += num;
-            else
-                fprintf(stderr, "Couldn't insert string\n");
-        }
-
+        manageEvents(gap, &cursor);
         BeginDrawing();
         ClearBackground(WHITE);
-        
-        GapBufferLine line;
-        GapBufferIter iter;
-        GapBufferIter_init(&iter, gap);
-        
-        float font_size = 24;        
-        float line_h = font_size+4;
-        float cursor_w = 3;
-        Color cursor_color = RED;
-        Color   font_color = BLACK;
-
-        int line_x = 0;
-        int line_y = 0;
-        size_t line_offset = 0;
-        size_t line_count = 0;
-        bool drew_cursor = false;
-        while (GapBufferIter_next(&iter, &line)) {
-                
-            float line_w = renderString(font, line.str, line.len, 
-                                        line_x, line_y, font_size, 
-                                        font_color);
-
-            if (cursor >= line_offset && cursor <= line_offset + line.len) {
-                int relative_cursor_x = calculateStringRenderWidth(font, font_size, line.str, cursor - line_offset);
-                DrawRectangle(line_x + relative_cursor_x, line_y, cursor_w, line_h, cursor_color);
-                drew_cursor = true;
-                line_w += cursor_w;
-            }
-
-            line_y += line_h;
-            line_offset += line.len + 1;
-            line_count++;
-        }
-        GapBufferIter_free(&iter);
-
-        if (!drew_cursor) {
-            DrawRectangle(line_x, line_y, cursor_w, line_h, cursor_color);
-            line_count++;
-        }
-
+        drawBufferContents(gap, font, cursor);
         EndDrawing();
     }
 
     CloseWindow();
-    free_widget_pool();
     GapBuffer_destroy(gap);
     return 0;
 }
