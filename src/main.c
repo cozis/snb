@@ -14,7 +14,6 @@
 void manageEvents(GapBuffer *gap, BufferViewStyle *style)
 {
     bool control_pressed = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
-
     for (int key; (key = GetKeyPressed()) > 0;) {
         
         switch (key) {
@@ -35,7 +34,7 @@ void manageEvents(GapBuffer *gap, BufferViewStyle *style)
 
             case KEY_LEFT:  GapBuffer_moveRelative(gap, -1); break;
             case KEY_RIGHT: GapBuffer_moveRelative(gap, +1); break;
-            
+
             case KEY_ENTER:
             if (!GapBuffer_insertString(gap, "\n", 1))
                 fprintf(stderr, "Couldn't insert string\n");
@@ -54,6 +53,13 @@ void manageEvents(GapBuffer *gap, BufferViewStyle *style)
         if (!ok)
             fprintf(stderr, "Couldn't insert string\n");
     }
+}
+
+void drawRuler(Font font, int ruler_width, Color color) {
+    int font_size = 24;
+    float font_width = MeasureTextEx(font, "A", font_size, 0).x;
+    int x = ruler_width * font_width;
+    DrawLine(x, 0, x, GetScreenHeight(), color);
 }
 
 int main(int argc, char **argv)
@@ -89,13 +95,13 @@ int main(int argc, char **argv)
     initBufferView(&buff_view, &buff_view_style, gap);
 
     while (!WindowShouldClose()) {
-
-
-
+      
         manageEvents(gap, &buff_view_style);
+      
         BeginDrawing();
         ClearBackground(WHITE);
         drawBufferView(&buff_view);
+        drawRuler(font, 80, GRAY);
         EndDrawing();
     }
 
