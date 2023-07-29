@@ -24,6 +24,11 @@ struct GapBuffer {
     char   data[];
 };
 
+size_t GapBuffer_rawCursorPosition(GapBuffer *buff)
+{
+    return buff->gap_offset;
+}
+
 PRIVATE size_t getByteCount(GapBuffer *buff)
 {
     return buff->total - buff->gap_length;
@@ -257,6 +262,42 @@ bool GapBuffer_insertString(GapBuffer *buff, const char *str, size_t len)
     if (!isValidUTF8(str, len))
         return false;
     return insertBytesBeforeCursor(buff, (String) {.data=str, .size=len});
+}
+
+// https://stackoverflow.com/questions/42012563/convert-unicode-code-points-to-utf-8-and-utf-32
+static size_t runeToUTF8(unsigned char *const buffer, const unsigned int code)
+{
+    if (code <= 0x7F) {
+        buffer[0] = code;
+        return 1;
+    }
+    if (code <= 0x7FF) {
+        buffer[0] = 0xC0 | (code >> 6);            /* 110xxxxx */
+        buffer[1] = 0x80 | (code & 0x3F);          /* 10xxxxxx */
+        return 2;
+    }
+    if (code <= 0xFFFF) {
+        buffer[0] = 0xE0 | (code >> 12);           /* 1110xxxx */
+        buffer[1] = 0x80 | ((code >> 6) & 0x3F);   /* 10xxxxxx */
+        buffer[2] = 0x80 | (code & 0x3F);          /* 10xxxxxx */
+        return 3;
+    }
+    if (code <= 0x10FFFF) {
+        buffer[0] = 0xF0 | (code >> 18);           /* 11110xxx */
+        buffer[1] = 0x80 | ((code >> 12) & 0x3F);  /* 10xxxxxx */
+        buffer[2] = 0x80 | ((code >> 6) & 0x3F);   /* 10xxxxxx */
+        buffer[3] = 0x80 | (code & 0x3F);          /* 10xxxxxx */
+        return 4;
+    }
+    return 0;
+}
+
+bool GapBuffer_insertRune(GapBuffer *gap, unsigned int code)
+{
+    unsigned char temp[4];
+    
+    size_t num = runeToUTF8(temp, code);
+    return GapBuffer_insertString(gap, temp, num);
 }
 
 /* Symbol: getPrecedingSymbol
@@ -520,6 +561,41 @@ bool GapBufferIter_next(GapBufferIter *iter, GapBufferLine *line)
     iter->cur = i;
     return true;
 }
+
+#ifndef GAPBUFFER_NOIO
+#include <stdio.h>
+bool GapBuffer_insertFile(GapBuffer *gap, const char *file)
+{
+    FILE *stream = fopen(file, "rb");
+    if (stream == NULL)
+        return false;
+
+    char buffer[1024];
+    for (bool done = false; !done;) {
+        size_t num = fread(buffer, 1, sizeof(buffer), stream);
+        if (num < sizeof(buffer)) {
+            if (ferror(stream))
+                goto ouch; // Failed to read from stream
+            done = true;
+        }
+        bool ok = GapBuffer_insertString(gap, buffer, num);
+        if (!ok)
+            // NOTE: It's possible to have a failure because
+            //       the buffer doesn't contain valid utf-8
+            //       when a multi-byte symbol is truncated
+            //       while reading into the fixed-size buffer.
+            goto ouch; // File too big or invalid utf-8
+    }
+    GapBuffer_moveAbsolute(gap, 0);
+
+    fclose(stream);
+    return true;
+
+ouch:
+    fclose(stream);
+    return false;
+}
+#endif
 
 #ifndef GAPBUFFER_NOMALLOC
 #include <stdlib.h>
