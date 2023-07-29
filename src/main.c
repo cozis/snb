@@ -16,7 +16,7 @@ void manageEvents(GapBuffer *gap, BufferViewStyle *style)
     bool control_pressed = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
 
     for (int key; (key = GetKeyPressed()) > 0;) {
-        fprintf(stderr, "KEY %d\n", key);
+        
         switch (key) {
 
             case KEY_RIGHT_BRACKET:
