@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdint.h>
+#include <string.h>
 #include <raylib.h>
 #include "buff_view.h"
 
@@ -11,22 +12,26 @@
 #define MAX_FONT_SIZE 100
 #define INC_FONT_SIZE 2
 
+#define SPACES_PER_TAB 4
+
 void manageEvents(GapBuffer *gap, BufferViewStyle *style)
 {
-    bool control_pressed = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL);
+    bool control = IsKeyDown(KEY_LEFT_CONTROL) 
+                || IsKeyDown(KEY_RIGHT_CONTROL);
+
     for (int key; (key = GetKeyPressed()) > 0;) {
-        
+
         switch (key) {
 
             case KEY_RIGHT_BRACKET:
-            if (control_pressed) {
+            if (control) {
                 fprintf(stderr, "Increasing font size\n");
                 style->font_size = MIN(style->font_size + INC_FONT_SIZE, MAX_FONT_SIZE);
             }
             break;
             
             case KEY_SLASH:
-            if (control_pressed) {
+            if (control) {
                 fprintf(stderr, "Decreasing font size\n");
                 style->font_size = MAX(style->font_size - INC_FONT_SIZE, MIN_FONT_SIZE);
             }
@@ -43,11 +48,18 @@ void manageEvents(GapBuffer *gap, BufferViewStyle *style)
             case KEY_BACKSPACE: 
             GapBuffer_removeBackwards(gap, 1);
             break;
+
+            case KEY_TAB:
+            char spaces[SPACES_PER_TAB];
+            memset(spaces, ' ', sizeof(spaces));
+            if (!GapBuffer_insertString(gap, spaces, sizeof(spaces)))
+                fprintf(stderr, "Couldn't insert tab\n");
+            break;
         }
     }
 
     for (int code; (code = GetCharPressed()) > 0;) {
-
+        
         bool ok = GapBuffer_insertRune(gap, code);
 
         if (!ok)
