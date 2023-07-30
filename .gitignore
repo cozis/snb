@@ -1,6 +1,6 @@
 snb
 snb.exe
-dialog
-dialog.exe
+snb-dialog
+snb-dialog.exe
 
-cache/
+cache

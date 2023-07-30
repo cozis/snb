@@ -44,7 +44,7 @@ else
 endif
 
 EXE_EDITOR = snb
-EXE_DIALOG = dialog
+EXE_DIALOG = snb-dialog
 
 ifeq ($(OSNAME),windows)
 	RAYLIB_DIR = 3p/raylib-4.5.0_win64_mingw-w64
