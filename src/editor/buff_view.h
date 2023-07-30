@@ -1,4 +1,5 @@
 #include <raylib.h>
+#include "widget.h"
 #include "gap_buffer.h"
 
 typedef struct {
@@ -13,6 +14,7 @@ typedef struct {
 } BufferViewStyle;
 
 typedef struct {
+    Widget base;
     BufferViewStyle *style;
     const char *loaded_font_path;
     float       loaded_font_size;
@@ -20,7 +22,4 @@ typedef struct {
     GapBuffer *gap;
 } BufferView;
 
-void  initBufferView(BufferView *bufview, BufferViewStyle *style, GapBuffer *gap);
-void  freeBufferView(BufferView *bufview);
-void  drawBufferView(BufferView *bufview);
-void clickBufferView(BufferView *bufview, Vector2 mouse);
+Widget *createBufferView(BufferViewStyle *style);

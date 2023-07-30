@@ -1,5 +1,8 @@
+#include <stdio.h>
 #include <assert.h>
 #include <stdint.h>
+#include <string.h>
+#include <stdlib.h>
 #include "buff_view.h"
 
 #define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
@@ -167,18 +170,70 @@ stringRenderWidth(Font font, int font_size, const char *str, size_t len)
     return w;
 }
 
-void initBufferView(BufferView *bufview, BufferViewStyle *style, GapBuffer *gap)
+#define MAX_BUFFERS 32
+
+static void handleEvent(Widget *widget, Event event);
+static void draw(Widget *widget, Vector2 offset, Vector2 area);
+static void free_(Widget *widget);
+
+static bool initialized = false;
+static BufferView buffers[MAX_BUFFERS];
+static bool  used_buffers[MAX_BUFFERS];
+
+Widget *createBufferView(BufferViewStyle *style)
 {
-    bufview->style = style;
-    bufview->loaded_font_path = NULL;
-    bufview->loaded_font_size = 14;
-    bufview->loaded_font = GetFontDefault();
-    bufview->gap = gap;
+    if (!initialized) {
+        for (int i = 0; i < MAX_BUFFERS; i++)
+            used_buffers[i] = false;
+        initialized = true;
+    }
+
+    GapBuffer *gap;
+    {
+        size_t len = 1 << 16;
+        void  *mem = malloc(len);
+        if (mem == NULL)
+            return NULL;
+        gap = GapBuffer_createUsingMemory(mem, len, free);
+        if (gap == NULL) {
+            free(mem);
+            return NULL;
+        }
+    }
+
+    BufferView *bufview = NULL;
+    for (int i = 0; i < MAX_BUFFERS; i++)
+        if (used_buffers[i] == false) {
+            used_buffers[i] = true;
+            bufview = buffers+i;
+            break;
+        }
+
+    if (bufview) {
+        bufview->base.parent = NULL;
+        bufview->base.draw = draw;
+        bufview->base.free = free_;
+        bufview->base.handleEvent = handleEvent;
+        bufview->base.last_area.x = 0;
+        bufview->base.last_area.y = 0;
+        bufview->style = style;
+        bufview->loaded_font_path = NULL;
+        bufview->loaded_font_size = 14;
+        bufview->loaded_font = GetFontDefault();
+        bufview->gap = gap;
+    } else
+        GapBuffer_destroy(gap);
+
+    return (Widget*) bufview;
 }
 
-void freeBufferView(BufferView *bufview)
+static void free_(Widget *widget)
 {
-    (void) bufview;
+    BufferView *bufview = (BufferView*) widget;
+    int i = bufview - buffers;
+    assert(i >= 0 && i < MAX_BUFFERS && used_buffers[i] == true);
+    used_buffers[i] = false;
+    GapBuffer_destroy(bufview->gap);
 }
 
 static void reloadFont(BufferView *bufview)
@@ -215,8 +270,9 @@ static void drawRuler(Font font, int font_size, int ruler_width, Color color)
     DrawLine(x, 0, x, GetScreenHeight(), color);
 }
 
-void drawBufferView(BufferView *bufview)
+static void draw(Widget *widget, Vector2 offset, Vector2 area)
 {
+    BufferView *bufview = (BufferView*) widget;
     reloadStyleIfChanged(bufview);
 
     float font_size    = bufview->style->font_size;
@@ -226,6 +282,9 @@ void drawBufferView(BufferView *bufview)
     Color cursor_color = bufview->style->color_cursor;
     Color   font_color = bufview->style->color_text;
     Color  ruler_color = bufview->style->color_ruler;
+
+    if (getFocus() != widget)
+        cursor_color = GRAY;
 
     Font      font = bufview->loaded_font;
     GapBuffer *gap = bufview->gap;
@@ -238,8 +297,8 @@ void drawBufferView(BufferView *bufview)
     GapBufferIter iter;
     GapBufferIter_init(&iter, gap);
 
-    int line_x = 0;
-    int line_y = 0;
+    int line_x = offset.x;
+    int line_y = offset.y;
     size_t line_offset = 0;
     size_t line_count = 0;
     bool drew_cursor = false;
@@ -313,7 +372,7 @@ longestSubstringThatRendersInLessPixelsThan(Font font, int font_size,
     return i;
 }
 
-void clickBufferView(BufferView *bufview, Vector2 mouse)
+static void manageClick(BufferView *bufview, Vector2 mouse)
 {
     GapBuffer *gap = bufview->gap;
 
@@ -334,7 +393,7 @@ void clickBufferView(BufferView *bufview, Vector2 mouse)
 
     size_t cursor;
     if (not_last && GapBufferIter_next(&iter, &line))
-        cursor = line_offset + longestSubstringThatRendersInLessPixelsThan(bufview->loaded_font, font_size, 
+        cursor = line_offset + longestSubstringThatRendersInLessPixelsThan(bufview->loaded_font, font_size, // This function name is too long..
                                                                            line.str, line.len, mouse.x);
     else
         // If the line index is out of bounds, then the line offset
@@ -342,4 +401,64 @@ void clickBufferView(BufferView *bufview, Vector2 mouse)
         // of bounds index.
         cursor = MIN(line_offset, GapBuffer_getByteCount(gap));
     GapBuffer_moveAbsoluteRaw(gap, cursor);
+}
+
+#define SPACES_PER_TAB 4
+
+static void manageKey(BufferView *bufview, int key)
+{
+    char spaces[SPACES_PER_TAB];
+
+    GapBuffer *gap = bufview->gap;
+
+    switch (key) {
+        case KEY_LEFT:  GapBuffer_moveRelative(gap, -1); break;
+        case KEY_RIGHT: GapBuffer_moveRelative(gap, +1); break;
+
+        case KEY_ENTER:
+        if (!GapBuffer_insertString(gap, "\n", 1))
+            fprintf(stderr, "Couldn't insert string\n");
+        break;
+        
+        case KEY_BACKSPACE: 
+        GapBuffer_removeBackwards(gap, 1);
+        break;
+
+        case KEY_TAB:
+        memset(spaces, ' ', sizeof(spaces));
+        if (!GapBuffer_insertString(gap, spaces, sizeof(spaces)))
+            fprintf(stderr, "Couldn't insert tab\n");
+        break;
+    }
+}
+
+static void handleEvent(Widget *widget, Event event)
+{
+    BufferView *bufview = (BufferView*) widget;
+    GapBuffer *gap = bufview->gap;
+
+    switch (event.type) {
+
+        case EVENT_MOUSE_LEFT_DOWN:
+        setFocus(widget);
+        manageClick(bufview, event.mouse);
+        break;
+
+        case EVENT_OPEN:
+        GapBuffer_whipeClean(gap);
+        if (!GapBuffer_insertFile(gap, event.path))
+            fprintf(stderr, "Failed to load '%s'\n", event.path);
+        else
+            fprintf(stderr, "Loaded '%s'\n", event.path);
+        break;
+
+        case EVENT_TEXT:
+        if (!GapBuffer_insertRune(gap, event.rune)) 
+            fprintf(stderr, "Couldn't insert string\n");
+        break;
+
+        case EVENT_KEY:
+        manageKey(bufview, event.key);
+        break;
+    }
 }

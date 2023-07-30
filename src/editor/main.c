@@ -3,8 +3,10 @@
 #include <stdint.h>
 #include <string.h>
 #include <raylib.h>
+#include "event.h"
 #include "dialog.h"
 #include "buff_view.h"
+#include "split_view.h"
 
 #define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
 #define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
@@ -13,97 +15,127 @@
 #define MAX_FONT_SIZE 100
 #define INC_FONT_SIZE 2
 
-#define SPACES_PER_TAB 4
-
-void manageEvents(GapBuffer *gap, BufferView *bufview, BufferViewStyle *style)
+void manageEvents(Widget *root, BufferViewStyle *style)
 {
+    Vector2 mouse = GetMousePosition();
+
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        Vector2 mouse = GetMousePosition();
-        clickBufferView(bufview, mouse);
+        Event event;
+        event.type = EVENT_MOUSE_LEFT_DOWN;
+        event.mouse = mouse;
+        handleWidgetEvent(root, event);
     }
 
     bool control = IsKeyDown(KEY_LEFT_CONTROL) 
                 || IsKeyDown(KEY_RIGHT_CONTROL);
 
     for (int key; (key = GetKeyPressed()) > 0;) {
+        Widget *focus = getFocus();
+        if (control) {
+            switch (key) {
 
-        switch (key) {
-
-            case KEY_O:
-            if (control) {
-                char file[1024];
-                int num = chooseFile(file, sizeof(file));
-                if (num < 0)
-                    fprintf(stderr, "Failed to choose file\n");
-                else if (num == 0)
-                    fprintf(stderr, "Didn't choose a file\n");
-                else {
-                    GapBuffer_whipeClean(gap);
-                    if (!GapBuffer_insertFile(gap, file))
-                        fprintf(stderr, "Failed to load '%s'\n", file);
-                    else
-                        fprintf(stderr, "Loaded '%s'\n", file);
+                case KEY_UP:
+                {
+                    if (!focus)
+                        break;
+                    Widget *new_widget = createBufferView(style);
+                    if (!new_widget)
+                        break;
+                    if (!splitView(SPLIT_UP, focus, new_widget))
+                        freeWidget(new_widget);
                 }
-            }
-            break;
+                break;
 
-            case KEY_RIGHT_BRACKET:
-            if (control) {
+                case KEY_DOWN:
+                {
+                    if (!focus)
+                        break;
+                    Widget *new_widget = createBufferView(style);
+                    if (!new_widget)
+                        break;
+                    if (!splitView(SPLIT_DOWN, focus, new_widget))
+                        freeWidget(new_widget);
+                }
+                break;
+
+                case KEY_LEFT:
+                {
+                    if (!focus)
+                        break;
+                    Widget *new_widget = createBufferView(style);
+                    if (!new_widget)
+                        break;
+                    if (!splitView(SPLIT_LEFT, focus, new_widget))
+                        freeWidget(new_widget);
+                }
+                break;
+
+                case KEY_RIGHT:
+                {
+                    if (!focus)
+                        break;
+                    Widget *new_widget = createBufferView(style);
+                    if (!new_widget)
+                        break;
+                    if (!splitView(SPLIT_RIGHT, focus, new_widget))
+                        freeWidget(new_widget);
+                }
+                break;
+
+                case KEY_O:
+                if (focus) {
+                    char file[1024];
+                    int num = chooseFile(file, sizeof(file));
+                    if (num < 0)
+                        fprintf(stderr, "Failed to choose file\n");
+                    else if (num == 0)
+                        fprintf(stderr, "Didn't choose a file\n");
+                    else {
+                        Event event;
+                        event.type = EVENT_OPEN;
+                        event.mouse = mouse;
+                        event.path = file;
+                        handleWidgetEvent(focus, event);
+                    }
+                }
+                break;
+
+                case KEY_RIGHT_BRACKET:
                 fprintf(stderr, "Increasing font size\n");
                 style->font_size = MIN(style->font_size + INC_FONT_SIZE, MAX_FONT_SIZE);
-            }
-            break;
-            
-            case KEY_SLASH:
-            if (control) {
+                break;
+                
+                case KEY_SLASH:
                 fprintf(stderr, "Decreasing font size\n");
                 style->font_size = MAX(style->font_size - INC_FONT_SIZE, MIN_FONT_SIZE);
+                break;
             }
-            break;
-
-            case KEY_LEFT:  GapBuffer_moveRelative(gap, -1); break;
-            case KEY_RIGHT: GapBuffer_moveRelative(gap, +1); break;
-
-            case KEY_ENTER:
-            if (!GapBuffer_insertString(gap, "\n", 1))
-                fprintf(stderr, "Couldn't insert string\n");
-            break;
-            
-            case KEY_BACKSPACE: 
-            GapBuffer_removeBackwards(gap, 1);
-            break;
-
-            char spaces[SPACES_PER_TAB];
-            
-            case KEY_TAB:
-            memset(spaces, ' ', sizeof(spaces));
-            if (!GapBuffer_insertString(gap, spaces, sizeof(spaces)))
-                fprintf(stderr, "Couldn't insert tab\n");
-            break;
+        } else {
+            Widget *focus = getFocus();
+            if (focus) {
+                Event event;
+                event.type = EVENT_KEY;
+                event.mouse = mouse;
+                event.key = key;
+                handleWidgetEvent(focus, event);
+            }
         }
     }
 
-    for (int code; (code = GetCharPressed()) > 0;)
-        if (!GapBuffer_insertRune(gap, code)) 
-            fprintf(stderr, "Couldn't insert string\n");
+    for (int code; (code = GetCharPressed()) > 0;) {
+        Widget *focus = getFocus();
+        if (focus) {
+            Event event;
+            event.type = EVENT_TEXT;
+            event.mouse = mouse;
+            event.rune = code;
+            handleWidgetEvent(focus, event);
+        }
+    }
 }
 
 int main(int argc, char **argv)
 {
-    char mem[1 << 16];
-    GapBuffer *gap = GapBuffer_createUsingMemory(mem, sizeof(mem), NULL);
-    if (gap == NULL)
-        return -1;
-
-    if (argc > 1) {
-        const char *file = argv[1];
-        if (!GapBuffer_insertFile(gap, file)) {
-            fprintf(stderr, "Failed to load '%s'\n", file);
-            return -1;
-        }
-        fprintf(stderr, "Loaded '%s'\n", file);
-    }
-
     BufferViewStyle buff_view_style = {
         .line_h   = 1,
         .ruler_x  = 80,
@@ -115,25 +147,40 @@ int main(int argc, char **argv)
         .font_size = 24,
     };
 
+    const char *file;
+    if (argc > 1)
+        file = argv[1];
+    else
+        file = NULL;
+
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     SetTargetFPS(60);
     InitWindow(720, 500, "SNB");
 
-    BufferView buff_view;
-    initBufferView(&buff_view, &buff_view_style, gap);
+    Widget *root = createBufferView(&buff_view_style);
+    if (root == NULL)
+        return -1;
+    root->parent = &root;
+
+    if (file) {
+        Event event;
+        event.type = EVENT_OPEN;
+        event.mouse = (Vector2) {0, 0};
+        event.path = file;
+        handleWidgetEvent(root, event);
+    }
 
     while (!WindowShouldClose()) {
-      
-        manageEvents(gap, &buff_view, &buff_view_style);
-      
+        manageEvents(root, &buff_view_style);
         BeginDrawing();
         ClearBackground(WHITE);
-        drawBufferView(&buff_view);
+        Vector2 offset = {0, 0};
+        Vector2 area = {GetScreenWidth(), GetScreenHeight()};
+        drawWidget(root, offset, area);
         EndDrawing();
     }
 
     CloseWindow();
-    freeBufferView(&buff_view);
-    GapBuffer_destroy(gap);
+    freeWidget(root);
     return 0;
 }
