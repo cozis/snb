@@ -2,6 +2,9 @@
 #include <stdint.h>
 #include "buff_view.h"
 
+#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
+#define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
+
 int UTF8ToUTF32(const char *utf8_data, int nbytes, uint32_t *utf32_code)
 {
     assert(utf8_data != NULL);
@@ -263,4 +266,80 @@ void drawBufferView(BufferView *bufview)
         DrawRectangle(line_x, line_y, cursor_w, line_h, cursor_color);
         line_count++;
     }
+}
+
+static size_t 
+longestSubstringThatRendersInLessPixelsThan(Font font, int font_size,
+                                            const char *str, size_t len, 
+                                            float max_px_len)
+{
+    if (str == NULL)
+        str = "";
+
+    if (font.texture.id == 0) 
+        font = GetFontDefault();
+
+    float scale = (float) font_size / font.baseSize;
+
+    float  w = 0;
+    size_t i = 0;
+    while (i < len) {
+
+        uint32_t codepoint;
+        int consumed = UTF8ToUTF32(str + i, len - i, &codepoint);
+
+        if (consumed < 0) {
+            codepoint = '?';
+            consumed = 1;
+        }
+        i += consumed;
+        int glyph_index = GetGlyphIndex(font, codepoint);
+
+        float delta;
+        int advanceX = font.glyphs[glyph_index].advanceX;
+        if (advanceX)
+            delta = (float) advanceX * scale;
+        else
+            delta = (float) font.recs[glyph_index].width * scale
+                  + (float) font.glyphs[glyph_index].offsetX * scale;
+        
+        assert(delta >= 0);
+        if (w + delta > max_px_len)
+            break;
+
+        w += delta;
+    }
+    assert(i <= len);
+    return i;
+}
+
+void clickBufferView(BufferView *bufview, Vector2 mouse)
+{
+    GapBuffer *gap = bufview->gap;
+
+    float font_size = bufview->loaded_font_size;
+
+    int line_index = mouse.y / (bufview->style->line_h * font_size);
+
+    GapBufferLine line;
+    GapBufferIter iter;
+    GapBufferIter_init(&iter, gap);
+    bool not_last = true;
+    int  index = 0;
+    size_t line_offset = 0;
+    while (index < line_index && (not_last = GapBufferIter_next(&iter, &line))) {
+        index++;
+        line_offset += line.len + 1;
+    }
+
+    size_t cursor;
+    if (not_last && GapBufferIter_next(&iter, &line))
+        cursor = line_offset + longestSubstringThatRendersInLessPixelsThan(bufview->loaded_font, font_size, 
+                                                                           line.str, line.len, mouse.x);
+    else
+        // If the line index is out of bounds, then the line offset
+        // will be the number of bytes in the file, which is an out
+        // of bounds index.
+        cursor = MIN(line_offset, GapBuffer_getByteCount(gap));
+    GapBuffer_moveAbsoluteRaw(gap, cursor);
 }

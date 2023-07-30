@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <raylib.h>
+#include "dialog.h"
 #include "buff_view.h"
 
 #define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
@@ -14,39 +15,13 @@
 
 #define SPACES_PER_TAB 4
 
-int choose_file(char *dst, size_t max)
+void manageEvents(GapBuffer *gap, BufferView *bufview, BufferViewStyle *style)
 {
-    FILE *stream = popen("dialog", "r");
-    if (stream == NULL)
-        return false;
-
-    bool error = false;
-    size_t copied = 0;
-    for (bool done = false; !done; ) {
-        size_t cap = max - copied;
-        size_t num = fread(dst + copied, 1, cap, stream);
-        if (num < cap) {
-            if (ferror(stream))
-                error = true;
-            done = true;
-        }
-        copied += num;
-        if (copied == max)
-            done = true;
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        Vector2 mouse = GetMousePosition();
+        clickBufferView(bufview, mouse);
     }
 
-    copied = MIN(max-1, copied);
-    dst[copied] = '\0';
-
-    fclose(stream);
-    
-    if (error)
-        return -1;
-    return (int) copied; // Overflow?
-}
-
-void manageEvents(GapBuffer *gap, BufferViewStyle *style)
-{
     bool control = IsKeyDown(KEY_LEFT_CONTROL) 
                 || IsKeyDown(KEY_RIGHT_CONTROL);
 
@@ -148,7 +123,7 @@ int main(int argc, char **argv)
 
     while (!WindowShouldClose()) {
       
-        manageEvents(gap, &buff_view_style);
+        manageEvents(gap, &buff_view, &buff_view_style);
       
         BeginDrawing();
         ClearBackground(WHITE);

@@ -20,6 +20,7 @@ typedef struct {
     GapBuffer *gap;
 } BufferView;
 
-void initBufferView(BufferView *bufview, BufferViewStyle *style, GapBuffer *gap);
-void freeBufferView(BufferView *bufview);
-void drawBufferView(BufferView *bufview);
+void  initBufferView(BufferView *bufview, BufferViewStyle *style, GapBuffer *gap);
+void  freeBufferView(BufferView *bufview);
+void  drawBufferView(BufferView *bufview);
+void clickBufferView(BufferView *bufview, Vector2 mouse);

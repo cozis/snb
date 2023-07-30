@@ -29,7 +29,7 @@ size_t GapBuffer_rawCursorPosition(GapBuffer *buff)
     return buff->gap_offset;
 }
 
-PRIVATE size_t getByteCount(GapBuffer *buff)
+size_t GapBuffer_getByteCount(GapBuffer *buff)
 {
     return buff->total - buff->gap_length;
 }
@@ -476,6 +476,14 @@ size_t GapBuffer_moveAbsolute(GapBuffer *buff, size_t num)
     return buff->gap_offset;
 }
 
+void GapBuffer_moveAbsoluteRaw(GapBuffer *gap, size_t num)
+{
+    if (gap->gap_offset < num)
+        moveBytesBeforeGap(gap, num - gap->gap_offset);
+    else
+        moveBytesAfterGap(gap, gap->gap_offset - num);
+}
+
 void GapBufferIter_init(GapBufferIter *iter, GapBuffer *buff)
 {
     iter->crossed_gap = false;
@@ -615,7 +623,7 @@ bool GapBuffer_insertStringMaybeRelocate(GapBuffer **buff, const char *str, size
 {
     if (!GapBuffer_insertString(*buff, str, len)) {
         // Need to relocate
-        GapBuffer *buff2 = GapBuffer_create(getByteCount(*buff) + len);
+        GapBuffer *buff2 = GapBuffer_create(GapBuffer_getByteCount(*buff) + len);
         if (buff2 == NULL)
             return false; // Failed to create new location
 
