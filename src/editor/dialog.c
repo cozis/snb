@@ -6,6 +6,12 @@
 #define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
 
 #ifdef _WIN32
+#define SNB_DIALOG "snb-dialog"
+#else
+#define SNB_DIALOG "./snb-dialog"
+#endif
+
+#ifdef _WIN32
 
 #include <windows.h>
 #include <string.h>
@@ -44,20 +50,8 @@ int chooseFile(char *dst, size_t max)
 
 #else
 
-int chooseFile(char *dst, size_t max)
+static int drinkFromStream(FILE *stream, char *dst, size_t max)
 {
-    const char *dialog_exe;
-
-#ifdef _WIN32
-    dialog_exe = "snb-dialog";
-#else
-    dialog_exe = "./snb-dialog";
-#endif
-
-    FILE *stream = popen(dialog_exe, "r");
-    if (stream == NULL)
-        return -1;
-
     bool error = false;
     size_t copied = 0;
     for (bool done = false; !done; ) {
@@ -76,11 +70,56 @@ int chooseFile(char *dst, size_t max)
     copied = MIN(max-1, copied);
     dst[copied] = '\0';
 
-    fclose(stream);
-    
     if (error)
         return -1;
-    return (int) copied; // Overflow?
+    return (int) copied;
+}
+
+static int drinkFromProgram(const char *cmd, char *dst, size_t max)
+{
+    FILE *stream = popen(cmd, "r");
+    if (stream == NULL)
+        return -1;
+
+    int res = drinkFromStream(stream, dst, max);
+
+    if (pclose(stream) != 0)
+        return -1;
+    return res;
+}
+
+static int chooseFileRaylib(char *dst, size_t max)
+{
+    return drinkFromProgram(SNB_DIALOG, dst, max);
+}
+
+static void removeTrailingNewline(char *str, int *len)
+{
+    if (*len > 0 && str[*len-1] == '\n')
+        str[--(*len)] = '\0';
+}
+
+static int chooseFileZenity(char *dst, size_t max)
+{
+    int res = drinkFromProgram("zenity --file-selection", dst, max);
+    removeTrailingNewline(dst, &res); // Zenity returns a newline at the end of the output
+    return res;
+}
+
+static bool zenityMissing(void)
+{
+    FILE *stream = popen("zenity --help", "r");
+    return stream == NULL || pclose(stream) != 0;
+}
+
+int chooseFile(char *dst, size_t max)
+{
+    int res;
+    if (zenityMissing())
+        res = chooseFileRaylib(dst, max);
+    else
+        res = chooseFileZenity(dst, max);
+    return res;
 }
 
 #endif
