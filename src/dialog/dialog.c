@@ -14,10 +14,9 @@ int main(int argc, char **argv)
 
     int win_w = 800;
     int win_h = 560;
-
     InitWindow(win_w, win_h, "Choose file");
     SetTargetFPS(60);
-
+    
     GuiWindowFileDialogState fileDialogState = InitGuiWindowFileDialog(GetWorkingDirectory());
     fileDialogState.windowActive = true;
     fileDialogState.windowBounds.x = 0;
