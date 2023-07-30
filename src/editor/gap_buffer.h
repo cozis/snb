@@ -18,6 +18,7 @@ typedef struct {
 
 GapBuffer *GapBuffer_createUsingMemory(void *mem, size_t len, void (*free)(void*));
 GapBuffer *GapBuffer_cloneUsingMemory(void *mem, size_t len, void (*free)(void*), const GapBuffer *src);
+void       GapBuffer_whipeClean(GapBuffer *gap);
 void       GapBuffer_destroy(GapBuffer *buff);
 bool       GapBuffer_insertString(GapBuffer *buff, const char *str, size_t len);
 bool       GapBuffer_insertRune(GapBuffer *buff, unsigned int code);

@@ -43,7 +43,8 @@ else
 	OBJDIR = cache/else
 endif
 
-EXE_GAME = snb
+EXE_EDITOR = snb
+EXE_DIALOG = dialog
 
 ifeq ($(OSNAME),windows)
 	RAYLIB_DIR = 3p/raylib-4.5.0_win64_mingw-w64
@@ -73,8 +74,11 @@ LFLAGS_WINDOWS = -lopengl32 -lgdi32 -lwinmm -lcomdlg32 -lws2_32
 rwildcard = $(foreach d, $(wildcard $(1:=/*)), $(call rwildcard ,$d, $2) $(filter $(subst *, %, $2), $d))
 uppercase = $(shell echo '$1' | tr '[:lower:]' '[:upper:]')
 
-CFILES = $(call rwildcard, $(SRCDIR), *.c)
-OFILES = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(CFILES))
+EDITOR_CFILES = $(call rwildcard, $(SRCDIR)/editor, *.c)
+DIALOG_CFILES = $(call rwildcard, $(SRCDIR)/dialog, *.c)
+
+EDITOR_OFILES = $(patsubst $(SRCDIR)/editor/%.c, $(OBJDIR)/editor/%.o, $(EDITOR_CFILES))
+DIALOG_OFILES = $(patsubst $(SRCDIR)/dialog/%.c, $(OBJDIR)/dialog/%.o, $(DIALOG_CFILES))
 
 CFLAGS = $(CFLAGS_CUSTOM) $(CFLAGS_ALWAYS) $(patsubst %, -I%, $(INCDIRS))
 LFLAGS = $(LFLAGS_CUSTOM) $(LFLAGS_ALWAYS) $(patsubst %, -L%, $(LIBDIRS))
@@ -92,14 +96,17 @@ else
 	$(error Unknown OS. Was expected windows)
 endif
 
-all: $(EXE_GAME)
+all: $(EXE_EDITOR) $(EXE_DIALOG)
 
-$(OBJDIR)/%.o: $(SRCDIR)/%.c $(wildcard $(SRCDIR)/*.h)
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
 	@ mkdir -p $(@D)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-$(EXE_GAME): $(OFILES)
+$(EXE_EDITOR): $(EDITOR_OFILES)
 	$(CC) -o $@ $^ $(LFLAGS)
+
+$(EXE_DIALOG): $(DIALOG_OFILES)
+	$(CC) -o $@ $(DIALOG_OFILES) $(LFLAGS)
 
 clean:
 	rm -fr cache

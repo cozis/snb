@@ -14,6 +14,37 @@
 
 #define SPACES_PER_TAB 4
 
+int choose_file(char *dst, size_t max)
+{
+    FILE *stream = popen("dialog", "r");
+    if (stream == NULL)
+        return false;
+
+    bool error = false;
+    size_t copied = 0;
+    for (bool done = false; !done; ) {
+        size_t cap = max - copied;
+        size_t num = fread(dst + copied, 1, cap, stream);
+        if (num < cap) {
+            if (ferror(stream))
+                error = true;
+            done = true;
+        }
+        copied += num;
+        if (copied == max)
+            done = true;
+    }
+
+    copied = MIN(max-1, copied);
+    dst[copied] = '\0';
+
+    fclose(stream);
+    
+    if (error)
+        return -1;
+    return (int) copied; // Overflow?
+}
+
 void manageEvents(GapBuffer *gap, BufferViewStyle *style)
 {
     bool control = IsKeyDown(KEY_LEFT_CONTROL) 
@@ -22,6 +53,24 @@ void manageEvents(GapBuffer *gap, BufferViewStyle *style)
     for (int key; (key = GetKeyPressed()) > 0;) {
 
         switch (key) {
+
+            case KEY_O:
+            if (control) {
+                char file[1024];
+                int num = choose_file(file, sizeof(file));
+                if (num < 0)
+                    fprintf(stderr, "Failed to choose file\n");
+                else if (num == 0)
+                    fprintf(stderr, "Didn't choose a file\n");
+                else {
+                    GapBuffer_whipeClean(gap);
+                    if (!GapBuffer_insertFile(gap, file))
+                        fprintf(stderr, "Failed to load '%s'\n", file);
+                    else
+                        fprintf(stderr, "Loaded '%s'\n", file);
+                }
+            }
+            break;
 
             case KEY_RIGHT_BRACKET:
             if (control) {
@@ -58,13 +107,9 @@ void manageEvents(GapBuffer *gap, BufferViewStyle *style)
         }
     }
 
-    for (int code; (code = GetCharPressed()) > 0;) {
-        
-        bool ok = GapBuffer_insertRune(gap, code);
-
-        if (!ok)
+    for (int code; (code = GetCharPressed()) > 0;)
+        if (!GapBuffer_insertRune(gap, code)) 
             fprintf(stderr, "Couldn't insert string\n");
-    }
 }
 
 int main(int argc, char **argv)
@@ -84,12 +129,12 @@ int main(int argc, char **argv)
     }
 
     BufferViewStyle buff_view_style = {
-        .line_h = 1,
+        .line_h   = 1,
+        .ruler_x  = 80,
         .cursor_w = 3,
-        .ruler_x = 80,
         .color_cursor = RED,
-        .color_text = BLACK,
-        .color_ruler = GRAY,
+        .color_text   = BLACK,
+        .color_ruler  = GRAY,
         .font_path = "SourceCodePro-Regular.ttf",
         .font_size = 24,
     };

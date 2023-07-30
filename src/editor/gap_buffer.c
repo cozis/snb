@@ -51,6 +51,12 @@ GapBuffer *GapBuffer_createUsingMemory(void *mem, size_t len, void (*free)(void*
     return buff;
 }
 
+void GapBuffer_whipeClean(GapBuffer *gap)
+{
+    gap->gap_offset = 0;
+    gap->gap_length = gap->total;
+}
+
 /* Symbol: GapBuffer_destroy
 **   Delete an instanciated gap buffer. 
 */
@@ -294,9 +300,9 @@ static size_t runeToUTF8(unsigned char *const buffer, const unsigned int code)
 
 bool GapBuffer_insertRune(GapBuffer *gap, unsigned int code)
 {
-    unsigned char temp[4];
+    char temp[4];
     
-    size_t num = runeToUTF8(temp, code);
+    size_t num = runeToUTF8((unsigned char*) temp, code);
     return GapBuffer_insertString(gap, temp, num);
 }
 
