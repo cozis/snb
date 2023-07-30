@@ -10,7 +10,7 @@
 #include <windows.h>
 #include <string.h>
 
-int choose_file(char *dst, size_t max)
+int chooseFile(char *dst, size_t max)
 {
     HWND hWnd = GetActiveWindow();
 
@@ -44,11 +44,19 @@ int choose_file(char *dst, size_t max)
 
 #else
 
-int choose_file(char *dst, size_t max)
+int chooseFile(char *dst, size_t max)
 {
-    FILE *stream = popen("snb-dialog", "r");
+    const char *dialog_exe;
+
+#ifdef _WIN32
+    dialog_exe = "snb-dialog";
+#else
+    dialog_exe = "./snb-dialog";
+#endif
+
+    FILE *stream = popen(dialog_exe, "r");
     if (stream == NULL)
-        return false;
+        return -1;
 
     bool error = false;
     size_t copied = 0;

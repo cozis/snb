@@ -3,6 +3,12 @@
 #include "raygui.h"
 #include "gui_window_file_dialog.h"
 
+#ifdef _WIN32
+#define PATHSEP "\\"
+#else
+#define PATHSEP "/"
+#endif
+
 static void log_callback(int logLevel, const char *text, va_list args)
 {
     //vfprintf(stderr, text, args);
@@ -16,7 +22,7 @@ int main(int argc, char **argv)
     int win_h = 560;
     InitWindow(win_w, win_h, "Choose file");
     SetTargetFPS(60);
-    
+
     GuiWindowFileDialogState fileDialogState = InitGuiWindowFileDialog(GetWorkingDirectory());
     fileDialogState.windowActive = true;
     fileDialogState.windowBounds.x = 0;
@@ -33,7 +39,7 @@ int main(int argc, char **argv)
     }
 
     if (fileDialogState.fileNameText[0])
-        fprintf(stdout, "%s\\%s", fileDialogState.dirPathText, fileDialogState.fileNameText);
+        fprintf(stdout, "%s" PATHSEP "%s", fileDialogState.dirPathText, fileDialogState.fileNameText);
 
     CloseWindow();
     return 0;

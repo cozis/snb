@@ -32,7 +32,7 @@ void manageEvents(GapBuffer *gap, BufferView *bufview, BufferViewStyle *style)
             case KEY_O:
             if (control) {
                 char file[1024];
-                int num = choose_file(file, sizeof(file));
+                int num = chooseFile(file, sizeof(file));
                 if (num < 0)
                     fprintf(stderr, "Failed to choose file\n");
                 else if (num == 0)
@@ -73,8 +73,9 @@ void manageEvents(GapBuffer *gap, BufferView *bufview, BufferViewStyle *style)
             GapBuffer_removeBackwards(gap, 1);
             break;
 
-            case KEY_TAB:
             char spaces[SPACES_PER_TAB];
+            
+            case KEY_TAB:
             memset(spaces, ' ', sizeof(spaces));
             if (!GapBuffer_insertString(gap, spaces, sizeof(spaces)))
                 fprintf(stderr, "Couldn't insert tab\n");
