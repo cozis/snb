@@ -95,11 +95,8 @@ void manageEvents(Widget *root)
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
         clickOntoWidget(root);
 
-    bool control = IsKeyDown(KEY_LEFT_CONTROL) 
-                || IsKeyDown(KEY_RIGHT_CONTROL);
-
     for (int key; (key = GetKeyPressed()) > 0;) {
-        if (control) {
+        if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
             switch (key) {
                 case KEY_UP:    split(SPLIT_UP);    break;
                 case KEY_DOWN:  split(SPLIT_DOWN);  break;

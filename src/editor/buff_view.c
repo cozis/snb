@@ -263,11 +263,11 @@ static void reloadStyleIfChanged(BufferView *bufview)
     }
 }
 
-static void drawRuler(Font font, int font_size, int ruler_width, Color color) 
+static void drawRuler(float x, float y, float h, Font font, int font_size, int ruler_width, Color color) 
 {
     float font_width = MeasureTextEx(font, "A", font_size, 0).x;
-    int x = ruler_width * font_width;
-    DrawLine(x, 0, x, GetScreenHeight(), color);
+    int offset = ruler_width * font_width;
+    DrawLine(x + offset, y, x + offset, y + h, color);
 }
 
 static void draw(Widget *widget, Vector2 offset, Vector2 area)
@@ -291,7 +291,7 @@ static void draw(Widget *widget, Vector2 offset, Vector2 area)
     
     size_t cursor = GapBuffer_rawCursorPosition(gap);
 
-    drawRuler(font, font_size, ruler_x, ruler_color);
+    drawRuler(offset.x, offset.y, area.y, font, font_size, ruler_x, ruler_color);
 
     GapBufferLine line;
     GapBufferIter iter;
