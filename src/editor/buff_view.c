@@ -180,7 +180,7 @@ static bool initialized = false;
 static BufferView buffers[MAX_BUFFERS];
 static bool  used_buffers[MAX_BUFFERS];
 
-Widget *createBufferView(BufferViewStyle *style)
+static BufferView *allocStructMemory(void)
 {
     if (!initialized) {
         for (int i = 0; i < MAX_BUFFERS; i++)
@@ -188,36 +188,51 @@ Widget *createBufferView(BufferViewStyle *style)
         initialized = true;
     }
 
+    BufferView *bufview = NULL;
+    for (int i = 0; i < MAX_BUFFERS; i++)
+        if (used_buffers[i] == false) {
+            bufview = buffers+i;
+            used_buffers[i] = true;
+            break;
+        }
+
+    return bufview;
+}
+
+static void freeStructMemory(BufferView *bufview)
+{
+    int i = bufview - buffers;
+    assert(i >= 0 && i < MAX_BUFFERS && used_buffers[i] == true);
+    used_buffers[i] = false;
+}
+
+Widget *createBufferView(BufferViewStyle *style)
+{
+    BufferView *bufview = allocStructMemory();
+
     GapBuffer *gap;
     {
         size_t len = 1 << 16;
         void  *mem = malloc(len);
-        if (mem == NULL)
+        if (mem == NULL) {
+            freeStructMemory(bufview);
             return NULL;
+        }
         gap = GapBuffer_createUsingMemory(mem, len, free);
         if (gap == NULL) {
+            freeStructMemory(bufview);
             free(mem);
             return NULL;
         }
     }
 
-    BufferView *bufview = NULL;
-    for (int i = 0; i < MAX_BUFFERS; i++)
-        if (used_buffers[i] == false) {
-            used_buffers[i] = true;
-            bufview = buffers+i;
-            break;
-        }
-
-    if (bufview) {
-        initWidget(&bufview->base, draw, free_, handleEvent);
-        bufview->style = style;
-        bufview->loaded_font_path = NULL;
-        bufview->loaded_font_size = 14;
-        bufview->loaded_font = GetFontDefault();
-        bufview->gap = gap;
-    } else
-        GapBuffer_destroy(gap);
+    initWidget(&bufview->base, draw, free_, handleEvent);
+    bufview->style = style;
+    bufview->loaded_font_path = NULL;
+    bufview->loaded_font_size = 14;
+    bufview->loaded_font = GetFontDefault();
+    bufview->gap = gap;
+    bufview->file[0] = '\0';
 
     return (Widget*) bufview;
 }
@@ -225,10 +240,9 @@ Widget *createBufferView(BufferViewStyle *style)
 static void free_(Widget *widget)
 {
     BufferView *bufview = (BufferView*) widget;
-    int i = bufview - buffers;
-    assert(i >= 0 && i < MAX_BUFFERS && used_buffers[i] == true);
-    used_buffers[i] = false;
+    UnloadFont(bufview->loaded_font);
     GapBuffer_destroy(bufview->gap);
+    freeStructMemory(bufview);
 }
 
 static void reloadFont(BufferView *bufview)
@@ -435,6 +449,90 @@ static void manageKey(BufferView *bufview, int key)
     }
 }
 
+static void openFile(BufferView *bufview, const char *filename)
+{
+    assert(filename);
+    
+    size_t filename_len = strlen(filename);
+
+    if (filename_len >= sizeof(bufview->file)) {
+        fprintf(stderr, "File path is too long (longer than the buffer file path limit)\n");
+        return;
+    }
+
+    // Try and open the file into a new gap buffer
+    size_t mem_len = 1 << 16; 
+    void *mem = malloc(mem_len);
+    if (mem == NULL) {
+        fprintf(stderr, "Failed to allocate gap buffer memory to load file\n");
+        return;
+    }
+    GapBuffer *gap = GapBuffer_createUsingMemory(mem, mem_len, free);
+    if (gap == NULL) {
+        fprintf(stderr, "Failed to initialize gap buffer to load file\n");
+        free(mem);
+        return;
+    }
+
+    if (!GapBuffer_insertFile(gap, filename)) {
+        
+        fprintf(stderr, "Failed to load '%s' into gap buffer (file too big or not valid utf-8)\n", filename);
+        
+        // Free the new gap buffer
+        GapBuffer_destroy(gap);
+
+    } else {
+
+        strcpy(bufview->file, filename);
+        fprintf(stderr, "Loaded '%s'\n", filename);
+
+        // Swap the old gap buffer with the new one
+        GapBuffer_destroy(bufview->gap);
+        bufview->gap = gap;
+    }
+}
+
+static bool generateRandomFilename(char *dst, size_t max)
+{
+    char file[L_tmpnam];
+    if (!tmpnam(file)) {
+        fprintf(stderr, "Couldn't generate a random file name\n");
+        return false;
+    }
+
+    snprintf(dst, max, ".%s", file);
+    return true;
+}
+
+static bool associateFilenameToBuffer(BufferView *bufview)
+{
+    assert(bufview->file[0] == '\0');
+    return generateRandomFilename(bufview->file, sizeof(bufview->file));
+}
+
+static void saveFile(BufferView *bufview)
+{
+    if (bufview->file[0] == '\0')
+        if (!associateFilenameToBuffer(bufview))
+            return;
+
+    // Save to a secondary file
+    char second[1024];
+    if (!generateRandomFilename(second, sizeof(second)))
+        return;
+
+    if (!GapBuffer_saveTo(bufview->gap, second)) {
+        fprintf(stderr, "Couldn't save data to file '%s'\n", second);
+        return;
+    }
+
+    // Data was written succesfully to the secondary
+    // file so now we can swap it with the actual
+    // target file.
+    remove(bufview->file);
+    rename(second, bufview->file);
+}
+
 static void handleEvent(Widget *widget, Event event)
 {
     BufferView *bufview = (BufferView*) widget;
@@ -443,17 +541,13 @@ static void handleEvent(Widget *widget, Event event)
     switch (event.type) {
 
         case EVENT_MOUSE_LEFT_DOWN:
+        fprintf(stderr, "mouse={.x=%f, .y=%f}\n", event.mouse.x, event.mouse.y);
         setFocus(widget);
         manageClick(bufview, event.mouse);
         break;
 
-        case EVENT_OPEN:
-        GapBuffer_whipeClean(gap);
-        if (!GapBuffer_insertFile(gap, event.path))
-            fprintf(stderr, "Failed to load '%s'\n", event.path);
-        else
-            fprintf(stderr, "Loaded '%s'\n", event.path);
-        break;
+        case EVENT_OPEN: openFile(bufview, event.path); break;
+        case EVENT_SAVE: saveFile(bufview); break;
 
         case EVENT_TEXT:
         if (!GapBuffer_insertRune(gap, event.rune)) 

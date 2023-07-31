@@ -609,6 +609,29 @@ ouch:
     fclose(stream);
     return false;
 }
+
+bool GapBuffer_saveTo(GapBuffer *gap, const char *file)
+{
+    FILE *stream = fopen(file, "w");
+    if (stream == NULL)
+        return false;
+
+    String before = getStringBeforeGap(gap);
+    fwrite(before.data, 1, before.size, stream);
+    if (ferror(stream)) {
+        fclose(stream);
+        return false;
+    }
+
+    String after = getStringAfterGap(gap);
+    fwrite(after.data, 1, after.size, stream);
+    if (ferror(stream)) {
+        fclose(stream);
+        return false;
+    }
+    fclose(stream);    
+    return true;
+}
 #endif
 
 #ifndef GAPBUFFER_NOMALLOC

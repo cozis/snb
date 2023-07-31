@@ -20,6 +20,7 @@ typedef struct {
     float       loaded_font_size;
     Font        loaded_font;
     GapBuffer *gap;
+    char file[1024];
 } BufferView;
 
 Widget *createBufferView(BufferViewStyle *style);

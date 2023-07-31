@@ -66,7 +66,7 @@ CFLAGS_LINUX   =
 CFLAGS_WINDOWS =
 
 LFLAGS_ALWAYS  = -l:libraylib.a
-LFLAGS_DEBUG   =
+LFLAGS_DEBUG   = -g
 LFLAGS_LINUX   = -lm -lpthread -ldl
 LFLAGS_WINDOWS = -lopengl32 -lgdi32 -lwinmm -lcomdlg32 -lws2_32
 
@@ -109,4 +109,4 @@ $(EXE_DIALOG): $(DIALOG_OFILES)
 	$(CC) -o $@ $(DIALOG_OFILES) $(LFLAGS)
 
 clean:
-	rm -fr cache
+	rm -fr cache snb snb.exe snb-dialog snb-dialog.exe

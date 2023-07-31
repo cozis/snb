@@ -23,6 +23,18 @@ void openFileIntoWidget(Widget *widget, const char *file)
     event.type = EVENT_OPEN;
     event.mouse = GetMousePosition();
     event.path = file;
+    event.mouse.x -= widget->last_offset.x;
+    event.mouse.y -= widget->last_offset.y;
+    handleWidgetEvent(widget, event);
+}
+
+void saveFileInWidget(Widget *widget)
+{
+    Event event;
+    event.type = EVENT_SAVE;
+    event.mouse = GetMousePosition();
+    event.mouse.x -= widget->last_offset.x;
+    event.mouse.y -= widget->last_offset.y;
     handleWidgetEvent(widget, event);
 }
 
@@ -32,6 +44,8 @@ void insertCharIntoWidget(Widget *widget, int code)
     event.type = EVENT_TEXT;
     event.mouse = GetMousePosition();
     event.rune = code;
+    event.mouse.x -= widget->last_offset.x;
+    event.mouse.y -= widget->last_offset.y;
     handleWidgetEvent(widget, event);
 }
 
@@ -67,6 +81,8 @@ void applyKeyToWidget(Widget *widget, int key)
     event.type = EVENT_KEY;
     event.mouse = GetMousePosition();
     event.key = key;
+    event.mouse.x -= widget->last_offset.x;
+    event.mouse.y -= widget->last_offset.y;
     handleWidgetEvent(widget, event);
 }
 
@@ -75,6 +91,8 @@ void clickOntoWidget(Widget *widget)
     Event event;
     event.type = EVENT_MOUSE_LEFT_DOWN;
     event.mouse = GetMousePosition();
+    event.mouse.x -= widget->last_offset.x;
+    event.mouse.y -= widget->last_offset.y;
     handleWidgetEvent(widget, event);
 }
 
@@ -83,6 +101,8 @@ void unclickFromWidget(Widget *widget)
     Event event;
     event.type = EVENT_MOUSE_LEFT_UP;
     event.mouse = GetMousePosition();
+    event.mouse.x -= widget->last_offset.x;
+    event.mouse.y -= widget->last_offset.y;
     handleWidgetEvent(widget, event);
 }
 
@@ -122,6 +142,7 @@ void manageEvents(Widget *root)
                 case KEY_LEFT:  split(SPLIT_LEFT);  break;
                 case KEY_RIGHT: split(SPLIT_RIGHT); break;
                 case KEY_O: if (focus) chooseFileAndOpenIntoWidget(focus); break;
+                case KEY_S: if (focus) saveFileInWidget(focus); break;
                 case KEY_RIGHT_BRACKET: increaseFontSize(); break;
                 case KEY_SLASH:         decreaseFontSize();break;
             }
@@ -135,6 +156,10 @@ void manageEvents(Widget *root)
 
 int main(int argc, char **argv)
 {
+    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+    SetTargetFPS(60);
+    InitWindow(720, 500, "SNB");
+    
     style = (BufferViewStyle) {
         .line_h   = 1,
         .ruler_x  = 80,
@@ -151,10 +176,6 @@ int main(int argc, char **argv)
         file = argv[1];
     else
         file = NULL;
-
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    SetTargetFPS(60);
-    InitWindow(720, 500, "SNB");
 
     Widget *root = createBufferView(&style);
     if (root == NULL)
@@ -173,8 +194,7 @@ int main(int argc, char **argv)
         drawWidget(root, offset, area);
         EndDrawing();
     }
-
-    CloseWindow();
     freeWidget(root);
+    CloseWindow();
     return 0;
 }

@@ -40,4 +40,5 @@ bool       GapBuffer_insertStringMaybeRelocate(GapBuffer **buff, const char *str
 
 #ifndef GAPBUFFER_NOIO
 bool GapBuffer_insertFile(GapBuffer *gap, const char *file);
+bool GapBuffer_saveTo(GapBuffer *gap, const char *file);
 #endif

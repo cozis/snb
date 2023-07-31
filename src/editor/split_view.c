@@ -111,7 +111,7 @@ static void free_(Widget *widget)
 static void handleEvent(Widget *widget, Event event)
 {
     SplitView *split = (SplitView*) widget;
-
+    
     switch (split->axis) {
         
         case SPLIT_X:

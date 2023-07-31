@@ -20,44 +20,44 @@ void initWidget(Widget *widget, WidgetFuncDraw draw,
     widget->handleEvent = handleEvent;
 }
 
-Rectangle getVerticalScrollThumbRegion(Widget *widget)
+static Rectangle getVerticalScrollThumbRegion(Widget *widget)
 {
     Vector2 scroll = widget->scroll;
-    Vector2 offset = widget->last_offset;
     Vector2 area = widget->last_area;
     Vector2 logic_area = widget->last_logic_area;
+    float ratio = area.y / logic_area.y;
 
     Rectangle rect;
 
     if (logic_area.y > area.y)
-        rect.height = area.y * area.y / logic_area.y;
+        rect.height = area.y * ratio;
     else
         rect.height = 0;
 
     rect.width = 20;
-    rect.x = offset.x + area.x - rect.width;
-    rect.y = offset.y + scroll.y * area.y / logic_area.y;
+    rect.x = area.x - rect.width;
+    rect.y = scroll.y * ratio;
 
     return rect;
 }
 
-Rectangle getHorizontalScrollThumbRegion(Widget *widget)
+static Rectangle getHorizontalScrollThumbRegion(Widget *widget)
 {
     Vector2 scroll = widget->scroll;
-    Vector2 offset = widget->last_offset;
     Vector2 area = widget->last_area;
     Vector2 logic_area = widget->last_logic_area;
+    float ratio = area.x / logic_area.x;
 
     Rectangle rect;
 
     if (logic_area.x > area.x)
-        rect.width = area.x * area.x / logic_area.x;
+        rect.width = area.x * ratio;
     else
         rect.width = 0;
 
     rect.height = 20;
-    rect.x = offset.x + scroll.x * area.x / logic_area.x;
-    rect.y = offset.y + area.y - rect.height;
+    rect.x = scroll.x * ratio;
+    rect.y = area.y - rect.height;
 
     return rect;
 }
@@ -66,6 +66,27 @@ bool isBiggerThanViewport(Widget *widget)
 {
     return widget->last_logic_area.x > widget->last_area.x
         || widget->last_logic_area.y > widget->last_area.y;
+}
+
+#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
+#define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
+
+float clampVerticalScrollValue(Widget *widget, float value)
+{
+    float min_scroll = 0;
+    float max_scroll = widget->last_logic_area.y - widget->last_area.y;
+    value = MIN(max_scroll, value);
+    value = MAX(min_scroll, value);
+    return value;
+}
+
+float clampHorizontalScrollValue(Widget *widget, float value)
+{
+    float min_scroll = 0;
+    float max_scroll = widget->last_logic_area.x - widget->last_area.x;
+    value = MIN(max_scroll, value);
+    value = MAX(min_scroll, value);
+    return value;
 }
 
 void drawWidget(Widget *widget, Vector2 offset, Vector2 area)
@@ -118,6 +139,9 @@ void drawWidget(Widget *widget, Vector2 offset, Vector2 area)
     widget->last_offset = offset;
     widget->last_area = area;
     widget->last_logic_area = logic_area;
+
+    widget->scroll.x = clampHorizontalScrollValue(widget, widget->scroll.x);
+    widget->scroll.y =   clampVerticalScrollValue(widget, widget->scroll.y);
 }
 
 #include <stdio.h>
@@ -129,20 +153,29 @@ void handleWidgetEvent(Widget *widget, Event event)
 
         case EVENT_MOUSE_MOVE:
         if (widget->scrolling) {
-            if (widget->scrolldir) 
+
+            if (widget->scrolldir) {
+
                 // Scrolling vertically
-                widget->scroll.y = widget->scroll_start + (event.mouse.y - widget->mouse_start) * widget->last_logic_area.y / widget->last_area.y;
-            else 
+                float ratio = widget->last_logic_area.y / widget->last_area.y;
+                float delta = (event.mouse.y - widget->mouse_start) * ratio;
+                widget->scroll.y = widget->scroll_start + delta;
+                widget->scroll.y = clampVerticalScrollValue(widget, widget->scroll.y);
+
+            } else {
+
                 // Scrolling horizontally
-                widget->scroll.x = widget->scroll_start + (event.mouse.x - widget->mouse_start) * widget->last_logic_area.x / widget->last_area.x;
+                float ratio = widget->last_logic_area.x / widget->last_area.x;
+                float delta = (event.mouse.x - widget->mouse_start) * ratio;
+                widget->scroll.x = widget->scroll_start + delta;
+                widget->scroll.x = clampHorizontalScrollValue(widget, widget->scroll.x);
+            }
             handled = true;
-            fprintf(stderr, "Moving..\n");
         }
         break;
         
         case EVENT_MOUSE_LEFT_UP:
         if (widget->scrolling) {
-            fprintf(stderr, "Sopped scrolling\n");
             handled = true;
             widget->scrolling = false;
             setMouseFocus(NULL);
@@ -151,7 +184,6 @@ void handleWidgetEvent(Widget *widget, Event event)
         
         case EVENT_MOUSE_LEFT_DOWN:
         if (CheckCollisionPointRec(event.mouse, getVerticalScrollThumbRegion(widget))) {
-            fprintf(stderr, "Scrolling vertically!\n");
             handled = true;
             widget->scrolling = true;
             widget->scrolldir = true;
@@ -159,7 +191,6 @@ void handleWidgetEvent(Widget *widget, Event event)
             widget->scroll_start = widget->scroll.y;
             setMouseFocus(widget);
         } else if (CheckCollisionPointRec(event.mouse, getHorizontalScrollThumbRegion(widget))) {
-            fprintf(stderr, "Scrolling horizontally!\n");
             handled = true;
             widget->scrolling = true;
             widget->scrolldir = false;
