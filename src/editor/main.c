@@ -15,128 +15,111 @@
 #define MAX_FONT_SIZE 100
 #define INC_FONT_SIZE 2
 
-void manageEvents(Widget *root, BufferViewStyle *style)
-{
-    Vector2 mouse = GetMousePosition();
+BufferViewStyle style;
 
-    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-        Event event;
-        event.type = EVENT_MOUSE_LEFT_DOWN;
-        event.mouse = mouse;
-        handleWidgetEvent(root, event);
-    }
+void openFileIntoWidget(Widget *widget, const char *file)
+{
+    Event event;
+    event.type = EVENT_OPEN;
+    event.mouse = GetMousePosition();
+    event.path = file;
+    handleWidgetEvent(widget, event);
+}
+
+void insertCharIntoWidget(Widget *widget, int code)
+{
+    Event event;
+    event.type = EVENT_TEXT;
+    event.mouse = GetMousePosition();
+    event.rune = code;
+    handleWidgetEvent(widget, event);
+}
+
+void chooseFileAndOpenIntoWidget(Widget *widget)
+{
+    char file[1024];
+    int num = chooseFile(file, sizeof(file));
+    if (num < 0)
+        fprintf(stderr, "Failed to choose file\n");
+    else if (num == 0)
+        fprintf(stderr, "Didn't choose a file\n");
+    else
+        openFileIntoWidget(widget, file);
+}
+
+void split(SplitDirection dir)
+{
+    Widget *focus = getFocus();
+    if (!focus)
+        return;
+
+    Widget *new_widget = createBufferView(&style);
+    if (!new_widget)
+        return;
+
+    if (!splitView(dir, focus, new_widget))
+        freeWidget(new_widget);
+}
+
+void applyKeyToWidget(Widget *widget, int key)
+{
+    Event event;
+    event.type = EVENT_KEY;
+    event.mouse = GetMousePosition();
+    event.key = key;
+    handleWidgetEvent(widget, event);
+}
+
+void clickOntoWidget(Widget *widget)
+{
+    Event event;
+    event.type = EVENT_MOUSE_LEFT_DOWN;
+    event.mouse = GetMousePosition();
+    handleWidgetEvent(widget, event);
+}
+
+void increaseFontSize(void)
+{
+    style.font_size = MIN(style.font_size + INC_FONT_SIZE, MAX_FONT_SIZE);
+}
+
+void decreaseFontSize(void)
+{
+    style.font_size = MAX(style.font_size - INC_FONT_SIZE, MIN_FONT_SIZE);
+}
+
+void manageEvents(Widget *root)
+{
+    Widget *focus = getFocus();
+
+    if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
+        clickOntoWidget(root);
 
     bool control = IsKeyDown(KEY_LEFT_CONTROL) 
                 || IsKeyDown(KEY_RIGHT_CONTROL);
 
     for (int key; (key = GetKeyPressed()) > 0;) {
-        Widget *focus = getFocus();
         if (control) {
             switch (key) {
-
-                case KEY_UP:
-                {
-                    if (!focus)
-                        break;
-                    Widget *new_widget = createBufferView(style);
-                    if (!new_widget)
-                        break;
-                    if (!splitView(SPLIT_UP, focus, new_widget))
-                        freeWidget(new_widget);
-                }
-                break;
-
-                case KEY_DOWN:
-                {
-                    if (!focus)
-                        break;
-                    Widget *new_widget = createBufferView(style);
-                    if (!new_widget)
-                        break;
-                    if (!splitView(SPLIT_DOWN, focus, new_widget))
-                        freeWidget(new_widget);
-                }
-                break;
-
-                case KEY_LEFT:
-                {
-                    if (!focus)
-                        break;
-                    Widget *new_widget = createBufferView(style);
-                    if (!new_widget)
-                        break;
-                    if (!splitView(SPLIT_LEFT, focus, new_widget))
-                        freeWidget(new_widget);
-                }
-                break;
-
-                case KEY_RIGHT:
-                {
-                    if (!focus)
-                        break;
-                    Widget *new_widget = createBufferView(style);
-                    if (!new_widget)
-                        break;
-                    if (!splitView(SPLIT_RIGHT, focus, new_widget))
-                        freeWidget(new_widget);
-                }
-                break;
-
-                case KEY_O:
-                if (focus) {
-                    char file[1024];
-                    int num = chooseFile(file, sizeof(file));
-                    if (num < 0)
-                        fprintf(stderr, "Failed to choose file\n");
-                    else if (num == 0)
-                        fprintf(stderr, "Didn't choose a file\n");
-                    else {
-                        Event event;
-                        event.type = EVENT_OPEN;
-                        event.mouse = mouse;
-                        event.path = file;
-                        handleWidgetEvent(focus, event);
-                    }
-                }
-                break;
-
-                case KEY_RIGHT_BRACKET:
-                fprintf(stderr, "Increasing font size\n");
-                style->font_size = MIN(style->font_size + INC_FONT_SIZE, MAX_FONT_SIZE);
-                break;
-                
-                case KEY_SLASH:
-                fprintf(stderr, "Decreasing font size\n");
-                style->font_size = MAX(style->font_size - INC_FONT_SIZE, MIN_FONT_SIZE);
-                break;
+                case KEY_UP:    split(SPLIT_UP);    break;
+                case KEY_DOWN:  split(SPLIT_DOWN);  break;
+                case KEY_LEFT:  split(SPLIT_LEFT);  break;
+                case KEY_RIGHT: split(SPLIT_RIGHT); break;
+                case KEY_O: if (focus) chooseFileAndOpenIntoWidget(focus); break;
+                case KEY_RIGHT_BRACKET: increaseFontSize(); break;
+                case KEY_SLASH:         decreaseFontSize();break;
             }
-        } else {
-            Widget *focus = getFocus();
-            if (focus) {
-                Event event;
-                event.type = EVENT_KEY;
-                event.mouse = mouse;
-                event.key = key;
-                handleWidgetEvent(focus, event);
-            }
-        }
+        } else
+            if (focus) applyKeyToWidget(focus, key);
     }
 
-    for (int code; (code = GetCharPressed()) > 0;) {
-        Widget *focus = getFocus();
-        if (focus) {
-            Event event;
-            event.type = EVENT_TEXT;
-            event.mouse = mouse;
-            event.rune = code;
-            handleWidgetEvent(focus, event);
-        }
-    }
+    for (int code; (code = GetCharPressed()) > 0;)
+        if (focus) insertCharIntoWidget(focus, code);
 }
 
 int main(int argc, char **argv)
 {
-    BufferViewStyle buff_view_style = {
+    style = (BufferViewStyle) {
         .line_h   = 1,
         .ruler_x  = 80,
         .cursor_w = 3,
@@ -157,21 +140,16 @@ int main(int argc, char **argv)
     SetTargetFPS(60);
     InitWindow(720, 500, "SNB");
 
-    Widget *root = createBufferView(&buff_view_style);
+    Widget *root = createBufferView(&style);
     if (root == NULL)
         return -1;
     root->parent = &root;
 
-    if (file) {
-        Event event;
-        event.type = EVENT_OPEN;
-        event.mouse = (Vector2) {0, 0};
-        event.path = file;
-        handleWidgetEvent(root, event);
-    }
+    if (file)
+        openFileIntoWidget(root, file);
 
     while (!WindowShouldClose()) {
-        manageEvents(root, &buff_view_style);
+        manageEvents(root);
         BeginDrawing();
         ClearBackground(WHITE);
         Vector2 offset = {0, 0};
