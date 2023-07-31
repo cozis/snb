@@ -56,7 +56,7 @@ static void freeStructMemory(SplitView *split)
 }
 
 static void handleEvent(Widget *widget, Event event);
-static void draw(Widget *widget, Vector2 offset, Vector2 area);
+static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area);
 static void free_(Widget *widget);
 
 bool splitView(SplitDirection dir, Widget *old_widget, Widget *new_widget)
@@ -88,12 +88,7 @@ bool splitView(SplitDirection dir, Widget *old_widget, Widget *new_widget)
             break;
     }
 
-    split->base.parent = old_widget->parent;
-    split->base.draw = draw;
-    split->base.free = free_;
-    split->base.handleEvent = handleEvent;
-    split->base.last_area.x = 0;
-    split->base.last_area.y = 0;
+    initWidget(&split->base, draw, free_, handleEvent);
     split->axis = axis;
     split->left_ratio = 0.5;
     split->left_or_up = left_or_up;
@@ -139,7 +134,7 @@ static void handleEvent(Widget *widget, Event event)
     }
 }
 
-static void draw(Widget *widget, Vector2 offset, Vector2 area)
+static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area)
 {
     SplitView *split = (SplitView*) widget;
 
@@ -178,4 +173,6 @@ static void draw(Widget *widget, Vector2 offset, Vector2 area)
         case SPLIT_X: DrawLine(l_offset.x + l_area.x, l_offset.y, l_offset.x + l_area.x, l_offset.y + l_area.y, BLACK); break;
         case SPLIT_Y: DrawLine(l_offset.x, l_offset.y + l_area.y, l_offset.x + l_area.x, l_offset.y + l_area.y, BLACK); break;
     }
+
+    return area;
 }

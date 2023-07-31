@@ -7,6 +7,7 @@ typedef enum {
     EVENT_KEY,
     EVENT_TEXT,
     EVENT_OPEN,
+    EVENT_MOUSE_MOVE,
     EVENT_MOUSE_LEFT_UP,
     EVENT_MOUSE_LEFT_DOWN,
 } EventType;

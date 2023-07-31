@@ -173,7 +173,7 @@ stringRenderWidth(Font font, int font_size, const char *str, size_t len)
 #define MAX_BUFFERS 32
 
 static void handleEvent(Widget *widget, Event event);
-static void draw(Widget *widget, Vector2 offset, Vector2 area);
+static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area);
 static void free_(Widget *widget);
 
 static bool initialized = false;
@@ -210,12 +210,7 @@ Widget *createBufferView(BufferViewStyle *style)
         }
 
     if (bufview) {
-        bufview->base.parent = NULL;
-        bufview->base.draw = draw;
-        bufview->base.free = free_;
-        bufview->base.handleEvent = handleEvent;
-        bufview->base.last_area.x = 0;
-        bufview->base.last_area.y = 0;
+        initWidget(&bufview->base, draw, free_, handleEvent);
         bufview->style = style;
         bufview->loaded_font_path = NULL;
         bufview->loaded_font_size = 14;
@@ -270,7 +265,7 @@ static void drawRuler(float x, float y, float h, Font font, int font_size, int r
     DrawLine(x + offset, y, x + offset, y + h, color);
 }
 
-static void draw(Widget *widget, Vector2 offset, Vector2 area)
+static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area)
 {
     BufferView *bufview = (BufferView*) widget;
     reloadStyleIfChanged(bufview);
@@ -297,6 +292,8 @@ static void draw(Widget *widget, Vector2 offset, Vector2 area)
     GapBufferIter iter;
     GapBufferIter_init(&iter, gap);
 
+    Vector2 logic_area = {0, 0};
+
     int line_x = offset.x;
     int line_y = offset.y;
     size_t line_offset = 0;
@@ -307,6 +304,8 @@ static void draw(Widget *widget, Vector2 offset, Vector2 area)
         float line_w = renderString(font, line.str, line.len, 
                                     line_x, line_y, font_size, 
                                     font_color);
+        
+        logic_area.x = MAX(logic_area.x, line_w);
 
         if (cursor >= line_offset && cursor <= line_offset + line.len) {
             int relative_cursor_x = stringRenderWidth(font, font_size, line.str, cursor - line_offset);
@@ -316,15 +315,19 @@ static void draw(Widget *widget, Vector2 offset, Vector2 area)
         }
 
         line_y += line_h;
-        line_offset += line.len + 1;
+        line_offset += line.len + 1; // line.len doesn't count the \n
         line_count++;
     }
     GapBufferIter_free(&iter);
 
     if (!drew_cursor) {
         DrawRectangle(line_x, line_y, cursor_w, line_h, cursor_color);
+        line_y += line_h;
         line_count++;
     }
+
+    logic_area.y = line_y;
+    return logic_area;
 }
 
 static size_t 

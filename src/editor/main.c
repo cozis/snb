@@ -78,6 +78,14 @@ void clickOntoWidget(Widget *widget)
     handleWidgetEvent(widget, event);
 }
 
+void unclickFromWidget(Widget *widget)
+{
+    Event event;
+    event.type = EVENT_MOUSE_LEFT_UP;
+    event.mouse = GetMousePosition();
+    handleWidgetEvent(widget, event);
+}
+
 void increaseFontSize(void)
 {
     style.font_size = MIN(style.font_size + INC_FONT_SIZE, MAX_FONT_SIZE);
@@ -91,9 +99,20 @@ void decreaseFontSize(void)
 void manageEvents(Widget *root)
 {
     Widget *focus = getFocus();
+    Widget *mouse_focus = getMouseFocus();
 
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
         clickOntoWidget(root);
+
+    if (mouse_focus && IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
+        unclickFromWidget(mouse_focus);
+
+    if (mouse_focus) {
+        Event event;
+        event.type = EVENT_MOUSE_MOVE;
+        event.mouse = GetMousePosition();
+        handleWidgetEvent(mouse_focus, event);
+    }
 
     for (int key; (key = GetKeyPressed()) > 0;) {
         if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
