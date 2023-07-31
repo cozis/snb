@@ -494,19 +494,15 @@ static void openFile(BufferView *bufview, const char *filename)
 
 static bool generateRandomFilename(char *dst, size_t max)
 {
-    char file[L_tmpnam];
-    if (!tmpnam(file)) {
-        fprintf(stderr, "Couldn't generate a random file name\n");
-        return false;
+    size_t len = MIN(16, max);
+
+    char table[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890";
+    
+    for (size_t i = 0; i < len-1; i++) {
+        int k = rand() % (sizeof(table)-1);
+        dst[i] = table[k];
     }
-
-#ifdef _WIN32
-#define PREFIX "."
-#else
-#define PREFIX ""
-#endif
-
-    snprintf(dst, max, PREFIX "%s", file);
+    dst[len-1] = '\0';
     return true;
 }
 
