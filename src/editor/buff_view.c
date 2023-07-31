@@ -500,7 +500,13 @@ static bool generateRandomFilename(char *dst, size_t max)
         return false;
     }
 
-    snprintf(dst, max, ".%s", file);
+#ifdef _WIN32
+#define PREFIX "."
+#else
+#define PREFIX ""
+#endif
+
+    snprintf(dst, max, PREFIX "%s", file);
     return true;
 }
 

@@ -612,7 +612,7 @@ ouch:
 
 bool GapBuffer_saveTo(GapBuffer *gap, const char *file)
 {
-    FILE *stream = fopen(file, "w");
+    FILE *stream = fopen(file, "wb");
     if (stream == NULL)
         return false;
 
