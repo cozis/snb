@@ -131,6 +131,8 @@ void manageEvents(Widget *root)
         Event event;
         event.type = EVENT_MOUSE_MOVE;
         event.mouse = GetMousePosition();
+        event.mouse.x -= mouse_focus->last_offset.x;
+        event.mouse.y -= mouse_focus->last_offset.y;
         handleWidgetEvent(mouse_focus, event);
     }
 
