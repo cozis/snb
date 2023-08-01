@@ -7,6 +7,7 @@
 #include "dialog.h"
 #include "buff_view.h"
 #include "split_view.h"
+#include "get_key_pressed_or_repeated.h"
 
 #define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
 #define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
@@ -135,21 +136,27 @@ void manageEvents(Widget *root)
         event.mouse.y -= mouse_focus->last_offset.y;
         handleWidgetEvent(mouse_focus, event);
     }
-
-    for (int key; (key = GetKeyPressed()) > 0;) {
+    
+    int first_repeat_freq = 500000;
+    int       repeat_freq =  30000;
+    for (int key, repeat; (key = GetKeyPressedOrRepeated(&repeat, repeat_freq, first_repeat_freq)) > 0;) {
         if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
-            switch (key) {
-                case KEY_UP:    split(SPLIT_UP);    break;
-                case KEY_DOWN:  split(SPLIT_DOWN);  break;
-                case KEY_LEFT:  split(SPLIT_LEFT);  break;
-                case KEY_RIGHT: split(SPLIT_RIGHT); break;
-                case KEY_O: if (focus) chooseFileAndOpenIntoWidget(focus); break;
-                case KEY_S: if (focus) saveFileInWidget(focus); break;
-                case KEY_RIGHT_BRACKET: increaseFontSize(); break;
-                case KEY_SLASH:         decreaseFontSize();break;
+            if (!repeat) {
+                switch (key) {
+                    case KEY_UP:    split(SPLIT_UP);    break;
+                    case KEY_DOWN:  split(SPLIT_DOWN);  break;
+                    case KEY_LEFT:  split(SPLIT_LEFT);  break;
+                    case KEY_RIGHT: split(SPLIT_RIGHT); break;
+                    case KEY_O: if (focus) chooseFileAndOpenIntoWidget(focus); break;
+                    case KEY_S: if (focus) saveFileInWidget(focus); break;
+                    case KEY_RIGHT_BRACKET: increaseFontSize(); break;
+                    case KEY_SLASH:         decreaseFontSize();break;
+                }
             }
-        } else
-            if (focus) applyKeyToWidget(focus, key);
+        } else {
+            if (focus)
+                applyKeyToWidget(focus, key);
+        }
     }
 
     for (int code; (code = GetCharPressed()) > 0;)
