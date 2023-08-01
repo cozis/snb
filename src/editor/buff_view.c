@@ -433,6 +433,8 @@ static void manageKey(BufferView *bufview, int key)
     GapBuffer *gap = bufview->gap;
 
     switch (key) {
+        case KEY_UP:    GapBuffer_moveRelativeVertically(gap, true);  break;
+        case KEY_DOWN:  GapBuffer_moveRelativeVertically(gap, false); break;
         case KEY_LEFT:  GapBuffer_moveRelative(gap, -1); break;
         case KEY_RIGHT: GapBuffer_moveRelative(gap, +1); break;
 
