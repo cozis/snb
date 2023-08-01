@@ -340,7 +340,7 @@ static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area)
         line_count++;
     }
 
-    logic_area.y = line_y;
+    logic_area.y = line_count * line_h;
     return logic_area;
 }
 
@@ -503,6 +503,8 @@ static bool generateRandomFilename(char *dst, size_t max)
         dst[i] = table[k];
     }
     dst[len-1] = '\0';
+
+    // TODO: Make sure this file doesn't exist
     return true;
 }
 

@@ -37,7 +37,6 @@ static Rectangle getVerticalScrollThumbRegion(Widget *widget)
     rect.width = 20;
     rect.x = area.x - rect.width;
     rect.y = scroll.y * ratio;
-
     return rect;
 }
 
@@ -144,7 +143,6 @@ void drawWidget(Widget *widget, Vector2 offset, Vector2 area)
     widget->scroll.y =   clampVerticalScrollValue(widget, widget->scroll.y);
 }
 
-#include <stdio.h>
 void handleWidgetEvent(Widget *widget, Event event)
 {
     bool handled = false;
