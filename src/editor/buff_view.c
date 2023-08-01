@@ -300,7 +300,7 @@ static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area)
     
     size_t cursor = GapBuffer_rawCursorPosition(gap);
 
-    drawRuler(offset.x, offset.y, area.y, font, font_size, ruler_x, ruler_color);
+    drawRuler(offset.x, offset.y, bufview->base.last_logic_area.y, font, font_size, ruler_x, ruler_color);
 
     GapBufferLine line;
     GapBufferIter iter;
