@@ -8,6 +8,7 @@ typedef struct {
     float ruler_x;
     float pad_h;
     float pad_v;
+    int spaces_per_tab;
     Color color_cursor;
     Color color_text;
     Color color_ruler;

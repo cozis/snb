@@ -424,12 +424,27 @@ static void manageClick(BufferView *bufview, Vector2 mouse)
     GapBuffer_moveAbsoluteRaw(gap, cursor);
 }
 
-#define SPACES_PER_TAB 4
+#define MAX_SPACES_PER_TAB 32
+
+static void insertTab(BufferView *bufview)
+{
+    GapBuffer *gap = bufview->gap;
+    
+    int spaces_per_tab = bufview->style->spaces_per_tab;
+    spaces_per_tab = MAX(spaces_per_tab, 0);
+    spaces_per_tab = MIN(spaces_per_tab, MAX_SPACES_PER_TAB);
+
+    char spaces[MAX_SPACES_PER_TAB];
+
+    int num = spaces_per_tab - GapBuffer_getColumn(gap) % spaces_per_tab;
+    memset(spaces, ' ', num);
+
+    if (!GapBuffer_insertString(gap, spaces, num))
+        fprintf(stderr, "Couldn't insert tab\n");
+}
 
 static void manageKey(BufferView *bufview, int key)
 {
-    char spaces[SPACES_PER_TAB];
-
     GapBuffer *gap = bufview->gap;
 
     switch (key) {
@@ -447,11 +462,7 @@ static void manageKey(BufferView *bufview, int key)
         GapBuffer_removeBackwards(gap, 1);
         break;
 
-        case KEY_TAB:
-        memset(spaces, ' ', sizeof(spaces));
-        if (!GapBuffer_insertString(gap, spaces, 4 - GapBuffer_getColumn(gap) % 4))
-            fprintf(stderr, "Couldn't insert tab\n");
-        break;
+        case KEY_TAB: insertTab(bufview); break;
     }
 }
 

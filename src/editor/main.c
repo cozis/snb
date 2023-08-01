@@ -180,6 +180,7 @@ int main(int argc, char **argv)
         .color_ruler  = GRAY,
         .font_path = "SourceCodePro-Regular.ttf",
         .font_size = 24,
+        .spaces_per_tab = 8,
     };
 
     const char *file;
