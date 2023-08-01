@@ -449,7 +449,7 @@ static void manageKey(BufferView *bufview, int key)
 
         case KEY_TAB:
         memset(spaces, ' ', sizeof(spaces));
-        if (!GapBuffer_insertString(gap, spaces, sizeof(spaces)))
+        if (!GapBuffer_insertString(gap, spaces, 4 - GapBuffer_getColumn(gap) % 4))
             fprintf(stderr, "Couldn't insert tab\n");
         break;
     }
