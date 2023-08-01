@@ -288,6 +288,8 @@ static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area)
     float line_h       = bufview->style->line_h * font_size;
     float cursor_w     = bufview->style->cursor_w;
     float ruler_x      = bufview->style->ruler_x;
+    float pad_h        = bufview->style->pad_h;
+    float pad_v        = bufview->style->pad_v;
     Color cursor_color = bufview->style->color_cursor;
     Color   font_color = bufview->style->color_text;
     Color  ruler_color = bufview->style->color_ruler;
@@ -308,8 +310,8 @@ static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area)
 
     Vector2 logic_area = {0, 0};
 
-    int line_x = offset.x;
-    int line_y = offset.y;
+    int line_x = offset.x + pad_h;
+    int line_y = offset.y + pad_v;
     size_t line_offset = 0;
     size_t line_count = 0;
     bool drew_cursor = false;
@@ -319,7 +321,7 @@ static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area)
                                     line_x, line_y, font_size, 
                                     font_color);
         
-        logic_area.x = MAX(logic_area.x, line_w);
+        logic_area.x = MAX(logic_area.x, 2*pad_h + line_w);
 
         if (cursor >= line_offset && cursor <= line_offset + line.len) {
             int relative_cursor_x = stringRenderWidth(font, font_size, line.str, cursor - line_offset);
@@ -340,7 +342,7 @@ static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area)
         line_count++;
     }
 
-    logic_area.y = line_count * line_h;
+    logic_area.y = 2*pad_v + line_count * line_h;
     return logic_area;
 }
 
@@ -394,8 +396,10 @@ static void manageClick(BufferView *bufview, Vector2 mouse)
     GapBuffer *gap = bufview->gap;
 
     float font_size = bufview->loaded_font_size;
+    float pad_h     = bufview->style->pad_h;
+    float pad_v     = bufview->style->pad_v;
 
-    int line_index = mouse.y / (bufview->style->line_h * font_size);
+    int line_index = (mouse.y - pad_v) / (bufview->style->line_h * font_size);
 
     GapBufferLine line;
     GapBufferIter iter;
@@ -411,7 +415,7 @@ static void manageClick(BufferView *bufview, Vector2 mouse)
     size_t cursor;
     if (not_last && GapBufferIter_next(&iter, &line))
         cursor = line_offset + longestSubstringThatRendersInLessPixelsThan(bufview->loaded_font, font_size, // This function name is too long..
-                                                                           line.str, line.len, mouse.x);
+                                                                           line.str, line.len, mouse.x - pad_h);
     else
         // If the line index is out of bounds, then the line offset
         // will be the number of bytes in the file, which is an out
@@ -545,7 +549,6 @@ static void handleEvent(Widget *widget, Event event)
     switch (event.type) {
 
         case EVENT_MOUSE_LEFT_DOWN:
-        fprintf(stderr, "mouse={.x=%f, .y=%f}\n", event.mouse.x, event.mouse.y);
         setFocus(widget);
         manageClick(bufview, event.mouse);
         break;

@@ -6,6 +6,8 @@ typedef struct {
     float line_h;
     float cursor_w;
     float ruler_x;
+    float pad_h;
+    float pad_v;
     Color color_cursor;
     Color color_text;
     Color color_ruler;

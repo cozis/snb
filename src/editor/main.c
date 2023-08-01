@@ -164,6 +164,8 @@ int main(int argc, char **argv)
         .line_h   = 1,
         .ruler_x  = 80,
         .cursor_w = 3,
+        .pad_h = 10,
+        .pad_v = 10,
         .color_cursor = RED,
         .color_text   = BLACK,
         .color_ruler  = GRAY,
