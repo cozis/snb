@@ -31,7 +31,13 @@ remove_dup_ws(char *str)
 }
 
 static int
-is_allowed(char ch)
+is_key(char ch)
+{
+    return isalpha(ch) || ch == '.';
+}
+
+static int
+is_value(char ch)
 {
     return isalnum(ch) || isblank(ch) || ispunct(ch);
 }
@@ -48,8 +54,22 @@ parse(const char *src, int len, CfgEntry *entries, int max_entries, char *err)
         cur++;
 
     while (cur < len && count < max_entries) {
+        // Consume comments
+        // while (cur < len && src[cur] == '#') {
+        //     do
+        //         cur++;
+        //     while (cur < len && src[cur] != '\n');
+
+        //     // Consume leading whitespace
+        //     while (cur < len && isspace(src[cur]))
+        //         cur++;
+
+        //     if (cur == len)
+        //         break;
+        // }
+
         // Missing key
-        if (cur == len || !isalpha(src[cur])) {
+        if (cur == len || !is_key(src[cur])) {  // Might remove cur == len later
             char *fmt = "Error: missing key in entry %d";
             snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
@@ -57,7 +77,7 @@ parse(const char *src, int len, CfgEntry *entries, int max_entries, char *err)
 
         // Consume key
         i = 0;
-        while (cur < len && i < MAX_KEY_LEN && isalpha(src[cur]))
+        while (cur < len && i < MAX_KEY_LEN && is_key(src[cur]))
             entries[count].key[i++] = src[cur++];
 
         entries[count].key[i++] = '\0';
@@ -94,7 +114,7 @@ parse(const char *src, int len, CfgEntry *entries, int max_entries, char *err)
             i = 0;
 
             // Copy all the value
-            while (cur < len && i < MAX_VAL_LEN && is_allowed(src[cur]))
+            while (cur < len && i < MAX_VAL_LEN && is_value(src[cur]))
                 entries[count].val.str[i++] = src[cur++];
             i--;
 
@@ -112,7 +132,7 @@ parse(const char *src, int len, CfgEntry *entries, int max_entries, char *err)
             while (cur < len && isdigit(src[cur]))
                 int_part = int_part * 10 + (src[cur++] - '0');
 
-            if (src[cur] == '.') {
+            if (cur < len && src[cur] == '.') {
                 cur++;
                 is_float = 1;
             }
