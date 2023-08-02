@@ -1,5 +1,6 @@
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define MAX_KEY_LEN 32
@@ -164,12 +165,19 @@ main(int argc, char *argv[])
     size_t size = ftell(file);
     rewind(file);
 
-    char src[size + 1];
+    char *src = malloc(size);
+
+    if (src == NULL) {
+        fprintf(stderr, "Error: buffer allocation failed\n");
+        return 1;
+    }
+
     size_t bytes_read = fread(src, sizeof(char), size, file);
     fclose(file);
 
     if (bytes_read != size) {
         fprintf(stderr, "Error: failed to read the file\n");
+        free(src);
         return 1;
     }
 
@@ -183,6 +191,7 @@ main(int argc, char *argv[])
 
     if (num_entries < 0) {
         fprintf(stderr, "%s\n", err);
+        free(src);
         return 1;
     }
 
@@ -201,10 +210,11 @@ main(int argc, char *argv[])
             break;
         default:
             fprintf(stderr, "Error: unknown type\n");
+            free(src);
             return 1;
         }
     }
-
+    free(src);
     return 0;
 }
 
