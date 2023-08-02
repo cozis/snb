@@ -445,6 +445,11 @@ size_t GapBuffer_removeForwards(GapBuffer *buff, size_t num)
     return removed;
 }
 
+void GapBuffer_removeForwardsRaw(GapBuffer *buff, size_t num)
+{
+    buff->gap_length += num;
+}
+
 static void recalculateColumn(GapBuffer *buff)
 {
     bool unused;

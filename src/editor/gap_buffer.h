@@ -27,6 +27,7 @@ size_t     GapBuffer_moveRelative(GapBuffer *buff, int off);
 size_t     GapBuffer_moveAbsolute(GapBuffer *buff, size_t num);
 void       GapBuffer_moveAbsoluteRaw(GapBuffer *gap, size_t num);
 size_t     GapBuffer_removeForwards(GapBuffer *buff, size_t num);
+void       GapBuffer_removeForwardsRaw(GapBuffer *buff, size_t num);
 size_t     GapBuffer_removeBackwards(GapBuffer *buff, size_t num);
 size_t     GapBuffer_getByteCount(GapBuffer *buff);
 size_t     GapBuffer_getColumn(GapBuffer *gap);

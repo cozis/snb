@@ -16,7 +16,7 @@
 #include <windows.h>
 #include <string.h>
 
-int chooseFile(char *dst, size_t max)
+int chooseFileToOpen(char *dst, size_t max)
 {
     HWND hWnd = GetActiveWindow();
 
@@ -36,6 +36,36 @@ int chooseFile(char *dst, size_t max)
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
 
     if(GetOpenFileName(&ofn) == TRUE) {
+        
+        size_t len = strlen(ofn.lpstrFile);
+        if (len >= max) len = max-1;
+
+        strncpy(dst, ofn.lpstrFile, max);
+        dst[len] = '\0';
+        return (int) len;
+    }
+
+    return 0;
+}
+
+int chooseFileToSave(char *dst, size_t max)
+{
+    OPENFILENAME ofn;
+
+    char szFileName[MAX_PATH] = "";
+
+    ZeroMemory(&ofn, sizeof(ofn));
+
+    HWND hWnd = GetActiveWindow();
+    ofn.lStructSize = sizeof(ofn); 
+    ofn.hwndOwner = hWnd;
+    ofn.lpstrFilter = TEXT("Text Files (*.txt)\0*.txt\0All Files (*.*)\0*.*\0");
+    ofn.lpstrFile = szFileName;
+    ofn.nMaxFile = sizeof(szFileName);
+    ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
+    ofn.lpstrDefExt = TEXT("txt");
+
+    if(GetSaveFileName(&ofn) == TRUE) {
         
         size_t len = strlen(ofn.lpstrFile);
         if (len >= max) len = max-1;

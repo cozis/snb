@@ -22,6 +22,9 @@ typedef struct {
     const char *loaded_font_path;
     float       loaded_font_size;
     Font        loaded_font;
+    bool        selecting;
+    size_t      select_first;
+    size_t      select_second;
     GapBuffer *gap;
     char file[1024];
 } BufferView;

@@ -16,9 +16,9 @@
 #define MAX_FONT_SIZE 100
 #define INC_FONT_SIZE 2
 
-BufferViewStyle style;
+static BufferViewStyle style;
 
-void openFileIntoWidget(Widget *widget, const char *file)
+static void openFileIntoWidget(Widget *widget, const char *file)
 {
     Event event;
     event.type = EVENT_OPEN;
@@ -29,7 +29,7 @@ void openFileIntoWidget(Widget *widget, const char *file)
     handleWidgetEvent(widget, event);
 }
 
-void saveFileInWidget(Widget *widget)
+static void saveFileInWidget(Widget *widget)
 {
     Event event;
     event.type = EVENT_SAVE;
@@ -39,7 +39,7 @@ void saveFileInWidget(Widget *widget)
     handleWidgetEvent(widget, event);
 }
 
-void insertCharIntoWidget(Widget *widget, int code)
+static void insertCharIntoWidget(Widget *widget, int code)
 {
     Event event;
     event.type = EVENT_TEXT;
@@ -50,10 +50,10 @@ void insertCharIntoWidget(Widget *widget, int code)
     handleWidgetEvent(widget, event);
 }
 
-void chooseFileAndOpenIntoWidget(Widget *widget)
+static void chooseFileAndOpenIntoWidget(Widget *widget)
 {
     char file[1024];
-    int num = chooseFile(file, sizeof(file));
+    int num = chooseFileToOpen(file, sizeof(file));
     if (num < 0)
         fprintf(stderr, "Failed to choose file\n");
     else if (num == 0)
@@ -62,7 +62,7 @@ void chooseFileAndOpenIntoWidget(Widget *widget)
         openFileIntoWidget(widget, file);
 }
 
-void split(SplitDirection dir)
+static void split(SplitDirection dir)
 {
     Widget *focus = getFocus();
     if (!focus)
@@ -76,7 +76,7 @@ void split(SplitDirection dir)
         freeWidget(new_widget);
 }
 
-void applyKeyToWidget(Widget *widget, int key)
+static void applyKeyToWidget(Widget *widget, int key)
 {
     Event event;
     event.type = EVENT_KEY;
@@ -87,7 +87,7 @@ void applyKeyToWidget(Widget *widget, int key)
     handleWidgetEvent(widget, event);
 }
 
-void clickOntoWidget(Widget *widget)
+static void clickOntoWidget(Widget *widget)
 {
     Event event;
     event.type = EVENT_MOUSE_LEFT_DOWN;
@@ -97,7 +97,7 @@ void clickOntoWidget(Widget *widget)
     handleWidgetEvent(widget, event);
 }
 
-void unclickFromWidget(Widget *widget)
+static void unclickFromWidget(Widget *widget)
 {
     Event event;
     event.type = EVENT_MOUSE_LEFT_UP;
@@ -107,17 +107,17 @@ void unclickFromWidget(Widget *widget)
     handleWidgetEvent(widget, event);
 }
 
-void increaseFontSize(void)
+static void increaseFontSize(void)
 {
     style.font_size = MIN(style.font_size + INC_FONT_SIZE, MAX_FONT_SIZE);
 }
 
-void decreaseFontSize(void)
+static void decreaseFontSize(void)
 {
     style.font_size = MAX(style.font_size - INC_FONT_SIZE, MIN_FONT_SIZE);
 }
 
-void manageEvents(Widget *root)
+static void manageEvents(Widget *root)
 {
     Widget *focus = getFocus();
     Widget *mouse_focus = getMouseFocus();

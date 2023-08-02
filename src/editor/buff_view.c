@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include "dialog.h"
 #include "buff_view.h"
 
 #define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
@@ -231,6 +232,9 @@ Widget *createBufferView(BufferViewStyle *style)
     bufview->loaded_font_path = NULL;
     bufview->loaded_font_size = 14;
     bufview->loaded_font = GetFontDefault();
+    bufview->selecting = false;
+    bufview->select_first  = 0;
+    bufview->select_second = 0;
     bufview->gap = gap;
     bufview->file[0] = '\0';
 
@@ -279,6 +283,17 @@ static void drawRuler(float x, float y, float h, Font font, int font_size, int r
     DrawLine(x + offset, y, x + offset, y + h, color);
 }
 
+static bool somethingSelected(BufferView *bufview)
+{
+    return bufview->select_first != bufview->select_second;
+}
+
+static void dropSelection(BufferView *bufview)
+{
+    bufview->select_first  = 0;
+    bufview->select_second = 0;
+}
+
 static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area)
 {
     BufferView *bufview = (BufferView*) widget;
@@ -312,10 +327,44 @@ static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area)
 
     int line_x = offset.x + pad_h;
     int line_y = offset.y + pad_v;
+    bool   drew_cursor = false;
     size_t line_offset = 0;
-    size_t line_count = 0;
-    bool drew_cursor = false;
+    size_t  line_count = 0;
     while (GapBufferIter_next(&iter, &line)) {
+
+        if (somethingSelected(bufview)) {
+        
+            size_t select_start = MIN(bufview->select_first, bufview->select_second);
+            size_t select_end   = MAX(bufview->select_first, bufview->select_second);
+
+            bool   line_selected = true;
+            size_t select_in_line_start;
+
+            if (select_start >= line_offset + line.len || select_end < line_offset)
+                line_selected = false;
+            else if (select_start < line_offset)
+                select_in_line_start = 0;
+            else
+                select_in_line_start = select_start - line_offset;
+
+            if (line_selected) {
+
+                size_t select_in_line_end;
+
+                if (select_end < line_offset + line.len)
+                    select_in_line_end = select_end - line_offset;
+                else
+                    select_in_line_end = line.len;
+
+                Rectangle selection_rect = {
+                    .x = line_x + stringRenderWidth(font, font_size, line.str, select_in_line_start),
+                    .y = line_y,
+                    .width  = stringRenderWidth(font, font_size, line.str + select_in_line_start, select_in_line_end - select_in_line_start),
+                    .height = line_h,
+                };
+                DrawRectangleRec(selection_rect, LIGHTGRAY);
+            }
+        }
             
         float line_w = renderString(font, line.str, line.len, 
                                     line_x, line_y, font_size, 
@@ -391,7 +440,9 @@ longestSubstringThatRendersInLessPixelsThan(Font font, int font_size,
     return i;
 }
 
-static void manageClick(BufferView *bufview, Vector2 mouse)
+static size_t 
+getOffsetAssociatedToCoordinates(BufferView *bufview, 
+                                 Vector2 point)
 {
     GapBuffer *gap = bufview->gap;
 
@@ -399,7 +450,7 @@ static void manageClick(BufferView *bufview, Vector2 mouse)
     float pad_h     = bufview->style->pad_h;
     float pad_v     = bufview->style->pad_v;
 
-    int line_index = (mouse.y - pad_v) / (bufview->style->line_h * font_size);
+    int line_index = (point.y - pad_v) / (bufview->style->line_h * font_size);
 
     GapBufferLine line;
     GapBufferIter iter;
@@ -415,13 +466,44 @@ static void manageClick(BufferView *bufview, Vector2 mouse)
     size_t cursor;
     if (not_last && GapBufferIter_next(&iter, &line))
         cursor = line_offset + longestSubstringThatRendersInLessPixelsThan(bufview->loaded_font, font_size, // This function name is too long..
-                                                                           line.str, line.len, mouse.x - pad_h);
+                                                                           line.str, line.len, point.x - pad_h);
     else
         // If the line index is out of bounds, then the line offset
         // will be the number of bytes in the file, which is an out
         // of bounds index.
         cursor = MIN(line_offset, GapBuffer_getByteCount(gap));
+    return cursor;
+}
+
+static void manageClick(BufferView *bufview, Vector2 mouse)
+{
+    GapBuffer *gap = bufview->gap;
+
+    size_t cursor = getOffsetAssociatedToCoordinates(bufview, mouse);
     GapBuffer_moveAbsoluteRaw(gap, cursor);
+
+    bufview->selecting = true;
+    bufview->select_first  = cursor;
+    bufview->select_second = cursor;
+    setMouseFocus((Widget*) bufview);
+}
+
+static void removeSelectionAndMoveCursorThere(BufferView *bufview)
+{
+    if (somethingSelected(bufview)) {
+
+        GapBuffer *gap = bufview->gap;
+
+        size_t select_start = MIN(bufview->select_first, bufview->select_second);
+        size_t select_end   = MAX(bufview->select_first, bufview->select_second);
+                
+        size_t num_selected_bytes = select_end - select_start;
+        GapBuffer_moveAbsolute(gap, bufview->select_first);
+        GapBuffer_removeForwardsRaw(gap, num_selected_bytes);
+
+        dropSelection(bufview);
+        bufview->selecting = false;
+    }
 }
 
 #define MAX_SPACES_PER_TAB 32
@@ -448,20 +530,53 @@ static void manageKey(BufferView *bufview, int key)
     GapBuffer *gap = bufview->gap;
 
     switch (key) {
-        case KEY_UP:    GapBuffer_moveRelativeVertically(gap, true);  break;
-        case KEY_DOWN:  GapBuffer_moveRelativeVertically(gap, false); break;
-        case KEY_LEFT:  GapBuffer_moveRelative(gap, -1); break;
-        case KEY_RIGHT: GapBuffer_moveRelative(gap, +1); break;
+        
+        case KEY_UP:
+        dropSelection(bufview);
+        GapBuffer_moveRelativeVertically(gap, true);
+        break;
+        
+        case KEY_DOWN:
+        dropSelection(bufview);
+        GapBuffer_moveRelativeVertically(gap, false);
+        break;
+        
+        case KEY_LEFT:
+        dropSelection(bufview);
+        GapBuffer_moveRelative(gap, -1); 
+        break;
+        
+        case KEY_RIGHT: 
+        dropSelection(bufview);
+        GapBuffer_moveRelative(gap, +1); 
+        break;
 
         case KEY_ENTER:
+        removeSelectionAndMoveCursorThere(bufview);
         if (!GapBuffer_insertString(gap, "\n", 1))
             fprintf(stderr, "Couldn't insert string\n");
         break;
         
-        case KEY_BACKSPACE: GapBuffer_removeBackwards(gap, 1); break;
-        case KEY_DELETE:    GapBuffer_removeForwards(gap, 1);  break;
+        case KEY_BACKSPACE:
+        if (somethingSelected(bufview))
+            removeSelectionAndMoveCursorThere(bufview);
+        else
+            GapBuffer_removeBackwards(gap, 1); 
+        break;
+        
+        case KEY_DELETE:
+        if (somethingSelected(bufview))
+            removeSelectionAndMoveCursorThere(bufview);
+        else
+            GapBuffer_removeForwards(gap, 1);
+        break;
 
-        case KEY_TAB: insertTab(bufview); break;
+        case KEY_TAB:
+        if (somethingSelected(bufview))
+            removeSelectionAndMoveCursorThere(bufview);
+        else
+            insertTab(bufview); 
+        break;
     }
 }
 
@@ -524,17 +639,13 @@ static bool generateRandomFilename(char *dst, size_t max)
     return true;
 }
 
-static bool associateFilenameToBuffer(BufferView *bufview)
-{
-    assert(bufview->file[0] == '\0');
-    return generateRandomFilename(bufview->file, sizeof(bufview->file));
-}
-
 static void saveFile(BufferView *bufview)
 {
-    if (bufview->file[0] == '\0')
-        if (!associateFilenameToBuffer(bufview))
+    if (bufview->file[0] == '\0') {
+        int n = chooseFileToSave(bufview->file, sizeof(bufview->file));
+        if (n <= 0)
             return;
+    }
 
     // Save to a secondary file
     char second[1024];
@@ -565,10 +676,25 @@ static void handleEvent(Widget *widget, Event event)
         manageClick(bufview, event.mouse);
         break;
 
+        case EVENT_MOUSE_LEFT_UP:
+        if (bufview->selecting) {
+            setMouseFocus(NULL);
+            bufview->selecting = false;
+        }
+        break;
+
+        case EVENT_MOUSE_MOVE:
+        if (bufview->selecting) {
+            bufview->select_second = getOffsetAssociatedToCoordinates(bufview, event.mouse);
+            GapBuffer_moveAbsoluteRaw(gap, bufview->select_second);
+        }
+        break;
+
         case EVENT_OPEN: openFile(bufview, event.path); break;
         case EVENT_SAVE: saveFile(bufview); break;
 
         case EVENT_TEXT:
+        removeSelectionAndMoveCursorThere(bufview);
         if (!GapBuffer_insertRune(gap, event.rune)) 
             fprintf(stderr, "Couldn't insert string\n");
         break;
