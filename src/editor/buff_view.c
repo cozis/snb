@@ -458,9 +458,8 @@ static void manageKey(BufferView *bufview, int key)
             fprintf(stderr, "Couldn't insert string\n");
         break;
         
-        case KEY_BACKSPACE: 
-        GapBuffer_removeBackwards(gap, 1);
-        break;
+        case KEY_BACKSPACE: GapBuffer_removeBackwards(gap, 1); break;
+        case KEY_DELETE:    GapBuffer_removeForwards(gap, 1);  break;
 
         case KEY_TAB: insertTab(bufview); break;
     }
