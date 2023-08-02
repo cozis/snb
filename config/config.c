@@ -21,8 +21,8 @@ typedef struct {
 
 typedef struct {
     const char *src;
-    int cur;
     int len;
+    int cur;
 } Scanner;
 
 static void
@@ -74,17 +74,18 @@ skip_whitespace(Scanner *scanner)
 }
 
 int
-parse(Scanner *scanner, CfgEntry *entries, int max_entries, char *err)
+parse(const char *src, int len, CfgEntry *entries, int max_entries, char *err)
 {
+    Scanner scanner = {.src = src, .len = len, .cur = 0};
     int i = 0;
     int count = 0;
 
     // Skip leading whitespace
-    skip_whitespace(scanner);
+    skip_whitespace(&scanner);
 
-    while (!is_at_end(scanner) && count < max_entries) {
+    while (!is_at_end(&scanner) && count < max_entries) {
         // Missing key
-        if (is_at_end(scanner) || !is_key(peek(scanner))) {
+        if (is_at_end(&scanner) || !is_key(peek(&scanner))) {
             char *fmt = "Error: missing key in entry %d";
             snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
@@ -92,44 +93,45 @@ parse(Scanner *scanner, CfgEntry *entries, int max_entries, char *err)
 
         // Consume key
         i = 0;
-        while (!is_at_end(scanner) && i < MAX_KEY_LEN && is_key(peek(scanner)))
-            entries[count].key[i++] = advance(scanner);
+        while (!is_at_end(&scanner) && i < MAX_KEY_LEN &&
+               is_key(peek(&scanner)))
+            entries[count].key[i++] = advance(&scanner);
 
         entries[count].key[i++] = '\0';
 
         // Skip whitespace between the key and ':'
-        skip_whitespace(scanner);
+        skip_whitespace(&scanner);
 
-        if (is_at_end(scanner) || peek(scanner) != ':') {
+        if (is_at_end(&scanner) || peek(&scanner) != ':') {
             char *fmt = "Error: ':' expected in entry %d";
             snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
         }
 
         // Consume ':'
-        advance(scanner);
+        advance(&scanner);
 
         // Skip whitespace between ':' and value
-        skip_whitespace(scanner);
+        skip_whitespace(&scanner);
 
         // Missing value
-        if (is_at_end(scanner) || peek(scanner) == '\n') {
+        if (is_at_end(&scanner) || peek(&scanner) == '\n') {
             char *fmt = "Error: missing value in entry %d";
             snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
         }
 
         // Consume value
-        char c = peek(scanner);
+        char c = peek(&scanner);
 
         if (isalpha(c) || ispunct(c)) {
             entries[count].type = TYPE_STR;
             i = 0;
 
             // Copy all the value
-            while (!is_at_end(scanner) && i < MAX_VAL_LEN &&
-                   is_value(peek(scanner)))
-                entries[count].val.str[i++] = advance(scanner);
+            while (!is_at_end(&scanner) && i < MAX_VAL_LEN &&
+                   is_value(peek(&scanner)))
+                entries[count].val.str[i++] = advance(&scanner);
             i--;
 
             // Remove trailing whitespace
@@ -143,18 +145,18 @@ parse(Scanner *scanner, CfgEntry *entries, int max_entries, char *err)
             int int_part = 0;
             float fract_part = 0;
 
-            while (!is_at_end(scanner) && isdigit(peek(scanner)))
-                int_part = int_part * 10 + (advance(scanner) - '0');
+            while (!is_at_end(&scanner) && isdigit(peek(&scanner)))
+                int_part = int_part * 10 + (advance(&scanner) - '0');
 
-            if (!is_at_end(scanner) && peek(scanner) == '.') {
-                advance(scanner);
+            if (!is_at_end(&scanner) && peek(&scanner) == '.') {
+                advance(&scanner);
                 is_float = 1;
             }
 
             if (is_float) {
                 int div = 1;
-                while (!is_at_end(scanner) && isdigit(peek(scanner))) {
-                    fract_part = fract_part * 10 + (advance(scanner) - '0');
+                while (!is_at_end(&scanner) && isdigit(peek(&scanner))) {
+                    fract_part = fract_part * 10 + (advance(&scanner) - '0');
                     div *= 10;
                 }
 
@@ -173,7 +175,7 @@ parse(Scanner *scanner, CfgEntry *entries, int max_entries, char *err)
         count++;
 
         // Skip whitespace for the next entry
-        skip_whitespace(scanner);
+        skip_whitespace(&scanner);
     }
 
     return count;
@@ -219,8 +221,7 @@ main(int argc, char *argv[])
     char err[MAX_ERR_LEN];
     const int max_entries = 32;
     CfgEntry entries[max_entries];
-    Scanner scanner = {.src = src, .cur = 0, .len = strlen(src)};
-    int num_entries = parse(&scanner, entries, max_entries, err);
+    int num_entries = parse(src, strlen(src), entries, max_entries, err);
 
     if (num_entries < 0) {
         fprintf(stderr, "%s\n", err);
