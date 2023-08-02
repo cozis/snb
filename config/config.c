@@ -4,6 +4,7 @@
 
 #define MAX_KEY_LEN 32
 #define MAX_VAL_LEN 32
+#define MAX_ERR_LEN 64
 
 typedef enum { TYPE_STR, TYPE_INT, TYPE_FLOAT } CfgValType;
 
@@ -17,7 +18,7 @@ typedef struct {
     } val;
 } CfgEntry;
 
-void
+static void
 remove_dup_ws(char *str)
 {
     int j = 0;
@@ -28,14 +29,14 @@ remove_dup_ws(char *str)
     str[j] = '\0';
 }
 
-int
+static int
 is_allowed(char ch)
 {
     return isalnum(ch) || isblank(ch) || ispunct(ch);
 }
 
 int
-parse(const char *src, int len, CfgEntry *entries, int max_entries)
+parse(const char *src, int len, CfgEntry *entries, int max_entries, char *err)
 {
     int i = 0;
     int cur = 0;
@@ -47,8 +48,11 @@ parse(const char *src, int len, CfgEntry *entries, int max_entries)
 
     while (cur < len && count < max_entries) {
         // Missing key
-        if (cur == len || !isalpha(src[cur]))
+        if (cur == len || !isalpha(src[cur])) {
+            char *fmt = "Error: missing key in entry %d";
+            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
+        }
 
         // Consume key
         i = 0;
@@ -61,19 +65,25 @@ parse(const char *src, int len, CfgEntry *entries, int max_entries)
         while (cur < len && isspace(src[cur]))
             cur++;
 
-        if (cur == len || src[cur] != ':')
+        if (cur == len || src[cur] != ':') {
+            char *fmt = "Error: ':' expected in entry %d";
+            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
+        }
 
         // Consume ':'
         cur++;
 
         // Consume whitespace between ':' and value
-        while (cur < len && isspace(src[cur]))
+        while (cur < len && isblank(src[cur]))
             cur++;
 
         // Missing value
-        if (cur == len)
+        if (cur == len || src[cur] == '\n') {
+            char *fmt = "Error: missing value in entry %d";
+            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
+        }
 
         // Consume value
         char c = src[cur];
@@ -120,6 +130,8 @@ parse(const char *src, int len, CfgEntry *entries, int max_entries)
                 entries[count].val.int_ = int_part;
             }
         } else {
+            char *fmt = "Error: invalid value in entry %d";
+            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
         }
 
@@ -163,14 +175,14 @@ main(int argc, char *argv[])
 
     src[size] = '\0';
 
+    char err[MAX_ERR_LEN];
     const int max_entries = 32;
     CfgEntry entries[max_entries];
 
-    // Q: Why not strlen(src) + 1 (for null-terminator)
-    int num_entries = parse(src, strlen(src), entries, max_entries);
+    int num_entries = parse(src, strlen(src), entries, max_entries, err);
 
     if (num_entries < 0) {
-        fprintf(stderr, "Error: failed to parse the input\n");
+        fprintf(stderr, "%s\n", err);
         return 1;
     }
 
