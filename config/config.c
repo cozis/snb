@@ -19,6 +19,12 @@ typedef struct {
     } val;
 } CfgEntry;
 
+typedef struct {
+    const char *src;
+    int cur;
+    int len;
+} Scanner;
+
 static void
 remove_dup_ws(char *str)
 {
@@ -42,34 +48,43 @@ is_value(char ch)
     return isalnum(ch) || isblank(ch) || ispunct(ch);
 }
 
+static int
+is_at_end(Scanner *scanner)
+{
+    return scanner->cur >= scanner->len;
+}
+
+static char
+advance(Scanner *scanner)
+{
+    return scanner->src[scanner->cur++];
+}
+
+static char
+peek(Scanner *scanner)
+{
+    return scanner->src[scanner->cur];
+}
+
+static void
+skip_whitespace(Scanner *scanner)
+{
+    while (!is_at_end(scanner) && isspace(peek(scanner)))
+        scanner->cur++;
+}
+
 int
-parse(const char *src, int len, CfgEntry *entries, int max_entries, char *err)
+parse(Scanner *scanner, CfgEntry *entries, int max_entries, char *err)
 {
     int i = 0;
-    int cur = 0;
     int count = 0;
 
-    // Consume leading whitespace
-    while (cur < len && isspace(src[cur]))
-        cur++;
+    // Skip leading whitespace
+    skip_whitespace(scanner);
 
-    while (cur < len && count < max_entries) {
-        // Consume comments
-        // while (cur < len && src[cur] == '#') {
-        //     do
-        //         cur++;
-        //     while (cur < len && src[cur] != '\n');
-
-        //     // Consume leading whitespace
-        //     while (cur < len && isspace(src[cur]))
-        //         cur++;
-
-        //     if (cur == len)
-        //         break;
-        // }
-
+    while (!is_at_end(scanner) && count < max_entries) {
         // Missing key
-        if (cur == len || !is_key(src[cur])) {  // Might remove cur == len later
+        if (is_at_end(scanner) || !is_key(peek(scanner))) {
             char *fmt = "Error: missing key in entry %d";
             snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
@@ -77,45 +92,44 @@ parse(const char *src, int len, CfgEntry *entries, int max_entries, char *err)
 
         // Consume key
         i = 0;
-        while (cur < len && i < MAX_KEY_LEN && is_key(src[cur]))
-            entries[count].key[i++] = src[cur++];
+        while (!is_at_end(scanner) && i < MAX_KEY_LEN && is_key(peek(scanner)))
+            entries[count].key[i++] = advance(scanner);
 
         entries[count].key[i++] = '\0';
 
-        // Consume whitespace between the key and ':'
-        while (cur < len && isspace(src[cur]))
-            cur++;
+        // Skip whitespace between the key and ':'
+        skip_whitespace(scanner);
 
-        if (cur == len || src[cur] != ':') {
+        if (is_at_end(scanner) || peek(scanner) != ':') {
             char *fmt = "Error: ':' expected in entry %d";
             snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
         }
 
         // Consume ':'
-        cur++;
+        advance(scanner);
 
-        // Consume whitespace between ':' and value
-        while (cur < len && isblank(src[cur]))
-            cur++;
+        // Skip whitespace between ':' and value
+        skip_whitespace(scanner);
 
         // Missing value
-        if (cur == len || src[cur] == '\n') {
+        if (is_at_end(scanner) || peek(scanner) == '\n') {
             char *fmt = "Error: missing value in entry %d";
             snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
         }
 
         // Consume value
-        char c = src[cur];
+        char c = peek(scanner);
 
         if (isalpha(c) || ispunct(c)) {
             entries[count].type = TYPE_STR;
             i = 0;
 
             // Copy all the value
-            while (cur < len && i < MAX_VAL_LEN && is_value(src[cur]))
-                entries[count].val.str[i++] = src[cur++];
+            while (!is_at_end(scanner) && i < MAX_VAL_LEN &&
+                   is_value(peek(scanner)))
+                entries[count].val.str[i++] = advance(scanner);
             i--;
 
             // Remove trailing whitespace
@@ -129,18 +143,18 @@ parse(const char *src, int len, CfgEntry *entries, int max_entries, char *err)
             int int_part = 0;
             float fract_part = 0;
 
-            while (cur < len && isdigit(src[cur]))
-                int_part = int_part * 10 + (src[cur++] - '0');
+            while (!is_at_end(scanner) && isdigit(peek(scanner)))
+                int_part = int_part * 10 + (advance(scanner) - '0');
 
-            if (cur < len && src[cur] == '.') {
-                cur++;
+            if (!is_at_end(scanner) && peek(scanner) == '.') {
+                advance(scanner);
                 is_float = 1;
             }
 
             if (is_float) {
                 int div = 1;
-                while (cur < len && isdigit(src[cur])) {
-                    fract_part = fract_part * 10 + (src[cur++] - '0');
+                while (!is_at_end(scanner) && isdigit(peek(scanner))) {
+                    fract_part = fract_part * 10 + (advance(scanner) - '0');
                     div *= 10;
                 }
 
@@ -158,9 +172,8 @@ parse(const char *src, int len, CfgEntry *entries, int max_entries, char *err)
 
         count++;
 
-        // Consume whitespace for the next entry
-        while (cur < len && isspace(src[cur]))
-            cur++;
+        // Skip whitespace for the next entry
+        skip_whitespace(scanner);
     }
 
     return count;
@@ -206,8 +219,8 @@ main(int argc, char *argv[])
     char err[MAX_ERR_LEN];
     const int max_entries = 32;
     CfgEntry entries[max_entries];
-
-    int num_entries = parse(src, strlen(src), entries, max_entries, err);
+    Scanner scanner = {.src = src, .cur = 0, .len = strlen(src)};
+    int num_entries = parse(&scanner, entries, max_entries, err);
 
     if (num_entries < 0) {
         fprintf(stderr, "%s\n", err);
