@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,7 +27,7 @@ typedef struct {
 } Scanner;
 
 static void
-remove_dup_ws(char *str)
+rm_dup_whitespace(char *str)
 {
     int j = 0;
     for (int i = 0; str[i] != '\0'; i++) {
@@ -36,19 +37,19 @@ remove_dup_ws(char *str)
     str[j] = '\0';
 }
 
-static int
+static bool
 is_key(char ch)
 {
     return isalpha(ch) || ch == '.';
 }
 
-static int
+static bool
 is_value(char ch)
 {
     return isalnum(ch) || isblank(ch) || ispunct(ch);
 }
 
-static int
+static bool
 is_at_end(Scanner *scanner)
 {
     return scanner->cur >= scanner->len;
@@ -139,9 +140,9 @@ parse(const char *src, int len, CfgEntry *entries, int max_entries, char *err)
                 i--;
 
             entries[count].val.str[++i] = '\0';
-            remove_dup_ws(entries[count].val.str);
+            rm_dup_whitespace(entries[count].val.str);
         } else if (isdigit(c)) {
-            int is_float = 0;
+            bool is_float = false;
             int int_part = 0;
             float fract_part = 0;
 
@@ -150,7 +151,7 @@ parse(const char *src, int len, CfgEntry *entries, int max_entries, char *err)
 
             if (!is_at_end(&scanner) && peek(&scanner) == '.') {
                 advance(&scanner);
-                is_float = 1;
+                is_float = true;
             }
 
             if (is_float) {
