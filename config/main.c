@@ -41,10 +41,9 @@ main(int argc, char *argv[])
 
     src[size] = '\0';
 
-    char err[MAX_ERR_LEN];
-    const int max_entries = 32;
-    CfgEntry entries[max_entries];
-    int num_entries = parse(src, strlen(src), entries, max_entries, err);
+    CfgEntry entries[64];
+    char err[64 + 1];
+    int num_entries = cfg_parse(src, strlen(src), entries, 64, err, 64);
 
     if (num_entries < 0) {
         fprintf(stderr, "%s\n", err);

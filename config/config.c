@@ -61,9 +61,14 @@ skip_whitespace(Scanner *scanner)
 }
 
 int
-parse(const char *src, int len, CfgEntry *entries, int max_entries, char *err)
+cfg_parse(const char *src,
+          int src_len,
+          CfgEntry *entries,
+          int max_entries,
+          char *err,
+          int err_len)
 {
-    Scanner scanner = {.src = src, .len = len, .cur = 0};
+    Scanner scanner = {.src = src, .len = src_len, .cur = 0};
     int i = 0;
     int count = 0;
 
@@ -74,7 +79,7 @@ parse(const char *src, int len, CfgEntry *entries, int max_entries, char *err)
         // Missing key
         if (is_at_end(&scanner) || !is_key(peek(&scanner))) {
             char *fmt = "Error: missing key in entry %d";
-            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
+            snprintf(err, err_len + 1, fmt, count + 1);
             return -1;
         }
 
@@ -91,7 +96,7 @@ parse(const char *src, int len, CfgEntry *entries, int max_entries, char *err)
 
         if (is_at_end(&scanner) || peek(&scanner) != ':') {
             char *fmt = "Error: ':' expected in entry %d";
-            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
+            snprintf(err, err_len + 1, fmt, count + 1);
             return -1;
         }
 
@@ -104,7 +109,7 @@ parse(const char *src, int len, CfgEntry *entries, int max_entries, char *err)
         // Missing value
         if (is_at_end(&scanner) || peek(&scanner) == '\n') {
             char *fmt = "Error: missing value in entry %d";
-            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
+            snprintf(err, err_len + 1, fmt, count + 1);
             return -1;
         }
 
@@ -155,7 +160,7 @@ parse(const char *src, int len, CfgEntry *entries, int max_entries, char *err)
             }
         } else {
             char *fmt = "Error: invalid value in entry %d";
-            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
+            snprintf(err, err_len + 1, fmt, count + 1);
             return -1;
         }
 

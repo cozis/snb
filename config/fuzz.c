@@ -6,10 +6,9 @@
 int
 LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 {
-    int max_entries = 64;
-    CfgEntry entries[max_entries];
-    char err[MAX_ERR_LEN + 1];
-    parse(Data, Size, entries, max_entries, err);
+    CfgEntry entries[64];
+    char err[64 + 1];
+    cfg_parse(Data, Size, entries, 64, err, 64);
     return 0;
 }
 
