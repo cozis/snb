@@ -4,21 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_KEY_LEN 32
-#define MAX_VAL_LEN 32
-#define MAX_ERR_LEN 64
-
-typedef enum { TYPE_STR, TYPE_INT, TYPE_FLOAT } CfgValType;
-
-typedef struct {
-    char key[MAX_KEY_LEN + 1];
-    CfgValType type;
-    union {
-        char str[MAX_VAL_LEN + 1];
-        int int_;
-        float float_;
-    } val;
-} CfgEntry;
+#include "config.h"
 
 typedef struct {
     const char *src;
@@ -181,93 +167,3 @@ parse(const char *src, int len, CfgEntry *entries, int max_entries, char *err)
 
     return count;
 }
-
-int
-main(int argc, char *argv[])
-{
-    if (argc != 2) {
-        fprintf(stderr, "Error: missing config file\n");
-        return 1;
-    }
-
-    FILE *file = fopen(argv[1], "r");
-
-    if (!file) {
-        fprintf(stderr, "Error: failed to open the file\n");
-        return 1;
-    }
-
-    fseek(file, 0, SEEK_END);
-    size_t size = ftell(file);
-    rewind(file);
-
-    char *src = malloc(size);
-
-    if (src == NULL) {
-        fprintf(stderr, "Error: buffer allocation failed\n");
-        return 1;
-    }
-
-    size_t bytes_read = fread(src, sizeof(char), size, file);
-    fclose(file);
-
-    if (bytes_read != size) {
-        fprintf(stderr, "Error: failed to read the file\n");
-        free(src);
-        return 1;
-    }
-
-    src[size] = '\0';
-
-    char err[MAX_ERR_LEN];
-    const int max_entries = 32;
-    CfgEntry entries[max_entries];
-    int num_entries = parse(src, strlen(src), entries, max_entries, err);
-
-    if (num_entries < 0) {
-        fprintf(stderr, "%s\n", err);
-        free(src);
-        return 1;
-    }
-
-    for (int i = 0; i < num_entries; i++) {
-        fprintf(stdout, "%s: ", entries[i].key);
-
-        switch (entries[i].type) {
-        case TYPE_STR:
-            fprintf(stdout, "%s\n", entries[i].val.str);
-            break;
-        case TYPE_INT:
-            fprintf(stdout, "%d\n", entries[i].val.int_);
-            break;
-        case TYPE_FLOAT:
-            fprintf(stdout, "%f\n", entries[i].val.float_);
-            break;
-        default:
-            fprintf(stderr, "Error: unknown type\n");
-            free(src);
-            return 1;
-        }
-    }
-    free(src);
-    return 0;
-}
-
-// EBNF Grammar
-
-// cfg  ::= line*
-// line ::= key ":" val "\n"
-// key  ::= str
-// val  ::= str | int | float
-
-// str   ::= alpha+
-// alpha ::= "a" ... "z" | "A" ... "Z"
-
-// int   ::= digit+
-// float ::= digit+ "." digit+
-// digit ::= "0" ... "9"
-
-// **************************************** //
-
-// Compile with: gcc -Wall -Wextra config.c
-// Run with: ./a.out config.cfg
