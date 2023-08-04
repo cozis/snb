@@ -12,42 +12,12 @@ main(int argc, char *argv[])
         return 1;
     }
 
-    FILE *file = fopen(argv[1], "r");
-
-    if (!file) {
-        fprintf(stderr, "Error: failed to open the file\n");
-        return 1;
-    }
-
-    fseek(file, 0, SEEK_END);
-    size_t size = ftell(file);
-    rewind(file);
-
-    char *src = malloc(size);
-
-    if (src == NULL) {
-        fprintf(stderr, "Error: buffer allocation failed\n");
-        return 1;
-    }
-
-    size_t bytes_read = fread(src, sizeof(char), size, file);
-    fclose(file);
-
-    if (bytes_read != size) {
-        fprintf(stderr, "Error: failed to read the file\n");
-        free(src);
-        return 1;
-    }
-
-    src[size] = '\0';
-
     CfgEntry entries[64];
     char err[64 + 1];
-    int num_entries = cfg_parse(src, strlen(src), entries, 64, err, 64);
+    int num_entries = cfg_load(argv[1], entries, 64, err, 64);
 
     if (num_entries < 0) {
         fprintf(stderr, "%s\n", err);
-        free(src);
         return 1;
     }
 
@@ -66,10 +36,15 @@ main(int argc, char *argv[])
             break;
         default:
             fprintf(stderr, "Error: unknown type\n");
-            free(src);
             return 1;
         }
     }
-    free(src);
+
+    CfgEntry *font = cfg_get("font", entries, num_entries);
+    if (font != NULL)
+        printf("Key: %s - Val: %s\n", font->key, font->val.str);
+    else
+        printf("NULL\n");
+
     return 0;
 }

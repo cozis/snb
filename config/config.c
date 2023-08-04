@@ -172,3 +172,63 @@ cfg_parse(const char *src,
 
     return count;
 }
+
+int
+cfg_load(const char *filename,
+         CfgEntry *entries,
+         int max_entries,
+         char *err,
+         int err_len)
+{
+    char *ext = strrchr(filename, '.');
+    if (strcmp(ext, ".cfg") != 0) {
+        strncpy(err, "Error: invalid file extension", err_len);
+        return -1;
+    }
+
+    FILE *file = fopen(filename, "r");
+
+    if (!file) {
+        strncpy(err, "Error: failed to open the file", err_len);
+        return -1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    size_t size = ftell(file);
+    rewind(file);
+
+    char *src = malloc(size);
+
+    if (src == NULL) {
+        strncpy(err, "Error: buffer allocation failed", err_len);
+        return -1;
+    }
+
+    size_t bytes_read = fread(src, sizeof(char), size, file);
+    fclose(file);
+
+    if (bytes_read != size) {
+        strncpy(err, "Error: failed to read the file", err_len);
+        free(src);
+        return -1;
+    }
+
+    src[size] = '\0';
+
+    int num_entries =
+        cfg_parse(src, strlen(src), entries, max_entries, err, err_len);
+
+    free(src);
+    return num_entries;
+}
+
+CfgEntry *
+cfg_get(const char *key, CfgEntry *entries, int num_entries)
+{
+    for (int i = num_entries - 1; i >= 0; i--) {
+        if (!strcmp(key, entries[i].key))
+            return &entries[i];
+    }
+
+    return NULL;
+}

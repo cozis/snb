@@ -24,8 +24,13 @@ int cfg_parse(const char *src,
               char *err,
               int err_len);
 
-int cfg_load(const char *filename, CfgEntry *entries);
-int cfg_get(const char *key, CfgEntry *entries);
+int cfg_load(const char *filename,
+             CfgEntry *entries,
+             int max_entries,
+             char *err,
+             int err_len);
+
+CfgEntry *cfg_get(const char *key, CfgEntry *entries, int num_entries);
 
 #endif
 
