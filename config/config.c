@@ -61,12 +61,7 @@ skip_whitespace(Scanner *scanner)
 }
 
 int
-cfg_parse(const char *src,
-          int src_len,
-          CfgEntry *entries,
-          int max_entries,
-          char *err,
-          int err_len)
+cfg_parse(const char *src, int src_len, CfgEntry *entries, char *err)
 {
     Scanner scanner = {.src = src, .len = src_len, .cur = 0};
     int i = 0;
@@ -75,11 +70,11 @@ cfg_parse(const char *src,
     // Skip leading whitespace
     skip_whitespace(&scanner);
 
-    while (!is_at_end(&scanner) && count < max_entries) {
+    while (!is_at_end(&scanner) && count < MAX_ENTRIES) {
         // Missing key
         if (is_at_end(&scanner) || !is_key(peek(&scanner))) {
             char *fmt = "Error: missing key in entry %d";
-            snprintf(err, err_len + 1, fmt, count + 1);
+            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
         }
 
@@ -96,7 +91,7 @@ cfg_parse(const char *src,
 
         if (is_at_end(&scanner) || peek(&scanner) != ':') {
             char *fmt = "Error: ':' expected in entry %d";
-            snprintf(err, err_len + 1, fmt, count + 1);
+            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
         }
 
@@ -109,7 +104,7 @@ cfg_parse(const char *src,
         // Missing value
         if (is_at_end(&scanner) || peek(&scanner) == '\n') {
             char *fmt = "Error: missing value in entry %d";
-            snprintf(err, err_len + 1, fmt, count + 1);
+            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
         }
 
@@ -160,7 +155,7 @@ cfg_parse(const char *src,
             }
         } else {
             char *fmt = "Error: invalid value in entry %d";
-            snprintf(err, err_len + 1, fmt, count + 1);
+            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
         }
 
@@ -174,22 +169,18 @@ cfg_parse(const char *src,
 }
 
 int
-cfg_load(const char *filename,
-         CfgEntry *entries,
-         int max_entries,
-         char *err,
-         int err_len)
+cfg_load(const char *filename, CfgEntry *entries, char *err)
 {
     char *ext = strrchr(filename, '.');
     if (strcmp(ext, ".cfg") != 0) {
-        strncpy(err, "Error: invalid file extension", err_len);
+        strncpy(err, "Error: invalid file extension", MAX_ERR_LEN);
         return -1;
     }
 
     FILE *file = fopen(filename, "r");
 
     if (!file) {
-        strncpy(err, "Error: failed to open the file", err_len);
+        strncpy(err, "Error: failed to open the file", MAX_ERR_LEN);
         return -1;
     }
 
@@ -200,7 +191,7 @@ cfg_load(const char *filename,
     char *src = malloc(size);
 
     if (src == NULL) {
-        strncpy(err, "Error: buffer allocation failed", err_len);
+        strncpy(err, "Error: buffer allocation failed", MAX_ERR_LEN);
         return -1;
     }
 
@@ -208,27 +199,15 @@ cfg_load(const char *filename,
     fclose(file);
 
     if (bytes_read != size) {
-        strncpy(err, "Error: failed to read the file", err_len);
+        strncpy(err, "Error: failed to read the file", MAX_ERR_LEN);
         free(src);
         return -1;
     }
 
     src[size] = '\0';
 
-    int num_entries =
-        cfg_parse(src, strlen(src), entries, max_entries, err, err_len);
+    int num_entries = cfg_parse(src, strlen(src), entries, err);
 
     free(src);
     return num_entries;
-}
-
-CfgEntry *
-cfg_get(const char *key, CfgEntry *entries, int num_entries)
-{
-    for (int i = num_entries - 1; i >= 0; i--) {
-        if (!strcmp(key, entries[i].key))
-            return &entries[i];
-    }
-
-    return NULL;
 }
