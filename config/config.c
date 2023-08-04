@@ -67,7 +67,26 @@ static void
 skip_whitespace()
 {
     while (!is_at_end() && isspace(peek()))
-        scanner.cur++;
+        advance();
+}
+
+void
+skip_comments()
+{
+    while (!is_at_end() && peek() == '#') {
+        do
+            advance();
+        while (!is_at_end() && peek() != '\n');
+    }
+}
+
+void
+skip_whitespace_and_comments()
+{
+    while (!is_at_end() && (isspace(peek()) || peek() == '#')) {
+        skip_whitespace();
+        skip_comments();
+    }
 }
 
 void
@@ -85,8 +104,8 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
     int count = 0;
     init_scanner(src, src_len);
 
-    // Skip leading whitespace
-    skip_whitespace();
+    // Skip whitespace and comments
+    skip_whitespace_and_comments();
 
     while (!is_at_end() && count < cfg->max_entries) {
         // Missing key
@@ -177,8 +196,8 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
 
         count++;
 
-        // Skip whitespace for the next entry
-        skip_whitespace();
+        // Skip whitespace and comments for the next entry
+        skip_whitespace_and_comments();
     }
 
     cfg->size = count;
