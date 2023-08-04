@@ -4,7 +4,6 @@
 #define MAX_KEY_LEN 32
 #define MAX_VAL_LEN 64
 #define MAX_ERR_LEN 64
-#define MAX_ENTRIES 128
 
 typedef enum { TYPE_STR, TYPE_INT, TYPE_FLOAT } CfgValType;
 
@@ -18,12 +17,31 @@ typedef struct {
     } val;
 } CfgEntry;
 
-int cfg_parse(const char *src, int src_len, CfgEntry *entries, char *err);
-int cfg_load(const char *filename, CfgEntry *entries, char *err);
+int cfg_parse(const char *src,
+              int src_len,
+              CfgEntry *entries,
+              int max_entries,
+              char *err);
 
-int cfg_get_int(CfgEntry *entries, const char *key, int default_);
-float cfg_get_float(CfgEntry *entries, const char *key, float default_);
-char *cfg_get_str(CfgEntry *entries, const char *key, char *default_);
+int cfg_load(const char *filename,
+             CfgEntry *entries,
+             int max_entries,
+             char *err);
+
+int cfg_get_int(CfgEntry *entries,
+                int entries_size,
+                const char *key,
+                int default_);
+
+float cfg_get_float(CfgEntry *entries,
+                    int entries_size,
+                    const char *key,
+                    float default_);
+
+char *cfg_get_str(CfgEntry *entries,
+                  int entries_size,
+                  const char *key,
+                  char *default_);
 
 void cfg_dump();
 void cfg_free();

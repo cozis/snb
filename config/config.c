@@ -71,7 +71,11 @@ skip_whitespace()
 }
 
 int
-cfg_parse(const char *src, int src_len, CfgEntry *entries, char *err)
+cfg_parse(const char *src,
+          int src_len,
+          CfgEntry *entries,
+          int max_entries,
+          char *err)
 {
     int i = 0;
     int count = 0;
@@ -80,11 +84,11 @@ cfg_parse(const char *src, int src_len, CfgEntry *entries, char *err)
     // Skip leading whitespace
     skip_whitespace();
 
-    while (!is_at_end() && count < MAX_ENTRIES) {
+    while (!is_at_end() && count < max_entries) {
         // Missing key
         if (is_at_end() || !is_key(peek())) {
-            char *fmt = "Error: missing key in entry %d";
-            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
+            char *fmt = "CfgError: missing key in entry %d";
+            snprintf(err, MAX_ERR_LEN, fmt, count + 1);
             return -1;
         }
 
@@ -99,8 +103,8 @@ cfg_parse(const char *src, int src_len, CfgEntry *entries, char *err)
         skip_whitespace();
 
         if (is_at_end() || peek() != ':') {
-            char *fmt = "Error: ':' expected in entry %d";
-            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
+            char *fmt = "CfgError: ':' expected in entry %d";
+            snprintf(err, MAX_ERR_LEN, fmt, count + 1);
             return -1;
         }
 
@@ -112,8 +116,8 @@ cfg_parse(const char *src, int src_len, CfgEntry *entries, char *err)
 
         // Missing value
         if (is_at_end() || peek() == '\n') {
-            char *fmt = "Error: missing value in entry %d";
-            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
+            char *fmt = "CfgError: missing value in entry %d";
+            snprintf(err, MAX_ERR_LEN, fmt, count + 1);
             return -1;
         }
 
@@ -162,8 +166,8 @@ cfg_parse(const char *src, int src_len, CfgEntry *entries, char *err)
                 entries[count].val.int_ = int_part;
             }
         } else {
-            char *fmt = "Error: invalid value in entry %d";
-            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
+            char *fmt = "CfgError: invalid value in entry %d";
+            snprintf(err, MAX_ERR_LEN, fmt, count + 1);
             return -1;
         }
 
@@ -177,18 +181,18 @@ cfg_parse(const char *src, int src_len, CfgEntry *entries, char *err)
 }
 
 int
-cfg_load(const char *filename, CfgEntry *entries, char *err)
+cfg_load(const char *filename, CfgEntry *entries, int max_entries, char *err)
 {
     char *ext = strrchr(filename, '.');
     if (strcmp(ext, ".cfg") != 0) {
-        strncpy(err, "Error: invalid file extension", MAX_ERR_LEN);
+        strncpy(err, "CfgError: invalid file extension", MAX_ERR_LEN);
         return -1;
     }
 
     FILE *file = fopen(filename, "r");
 
     if (!file) {
-        strncpy(err, "Error: failed to open the file", MAX_ERR_LEN);
+        strncpy(err, "CfgError: failed to open the file", MAX_ERR_LEN);
         return -1;
     }
 
@@ -196,10 +200,10 @@ cfg_load(const char *filename, CfgEntry *entries, char *err)
     size_t size = ftell(file);
     rewind(file);
 
-    char *src = malloc(size);
+    char *src = malloc(size + 1);
 
     if (src == NULL) {
-        strncpy(err, "Error: buffer allocation failed", MAX_ERR_LEN);
+        strncpy(err, "CfgError: memory allocation failed", MAX_ERR_LEN);
         return -1;
     }
 
@@ -207,15 +211,55 @@ cfg_load(const char *filename, CfgEntry *entries, char *err)
     fclose(file);
 
     if (bytes_read != size) {
-        strncpy(err, "Error: failed to read the file", MAX_ERR_LEN);
+        strncpy(err, "CfgError: failed to read the file", MAX_ERR_LEN);
         free(src);
         return -1;
     }
 
     src[size] = '\0';
 
-    int num_entries = cfg_parse(src, strlen(src), entries, err);
+    int entries_size = cfg_parse(src, strlen(src), entries, max_entries, err);
 
     free(src);
-    return num_entries;
+    return entries_size;
+}
+
+int
+cfg_get_int(CfgEntry *entries, int entries_size, const char *key, int default_)
+{
+    for (int i = entries_size - 1; i >= 0; i--) {
+        if (entries[i].type == TYPE_INT && !strcmp(key, entries[i].key))
+            return entries[i].val.int_;
+    }
+
+    return default_;
+}
+
+float
+cfg_get_float(CfgEntry *entries,
+              int entries_size,
+              const char *key,
+              float default_)
+{
+    for (int i = entries_size - 1; i >= 0; i--) {
+        if (entries[i].type == TYPE_FLOAT && !strcmp(key, entries[i].key)) {
+            return entries[i].val.float_;
+        }
+    }
+
+    return default_;
+}
+
+char *
+cfg_get_str(CfgEntry *entries,
+            int entries_size,
+            const char *key,
+            char *default_)
+{
+    for (int i = entries_size - 1; i >= 0; i--) {
+        if (entries[i].type == TYPE_STR && !strcmp(key, entries[i].key))
+            return entries[i].val.str;
+    }
+
+    return default_;
 }

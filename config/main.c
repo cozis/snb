@@ -13,8 +13,8 @@ main(int argc, char *argv[])
     }
 
     CfgEntry entries[64];
-    char err[64 + 1];
-    int num_entries = cfg_load(argv[1], entries, 64, err, 64);
+    char err[MAX_ERR_LEN + 1];
+    int num_entries = cfg_load(argv[1], entries, 64, err);
 
     if (num_entries < 0) {
         fprintf(stderr, "%s\n", err);
@@ -39,12 +39,6 @@ main(int argc, char *argv[])
             return 1;
         }
     }
-
-    CfgEntry *font = cfg_get("font", entries, num_entries);
-    if (font != NULL)
-        printf("Key: %s - Val: %s\n", font->key, font->val.str);
-    else
-        printf("NULL\n");
 
     return 0;
 }
