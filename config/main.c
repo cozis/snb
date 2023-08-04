@@ -12,15 +12,16 @@ main(int argc, char *argv[])
         return 1;
     }
 
+    int max_entries = 64;
     Cfg cfg;
-    CfgEntry *entries = malloc(64 * sizeof(CfgEntry));
+    CfgEntry *entries = malloc(max_entries * sizeof(CfgEntry));
 
     if (entries == NULL) {
         fprintf(stderr, "Error: memory allocation failed\n");
         return 1;
     }
 
-    cfg_init(&cfg, entries, 64);
+    cfg_init(&cfg, entries, max_entries);
 
     char err[MAX_ERR_LEN + 1];
     int res = cfg_load(argv[1], &cfg, err);
