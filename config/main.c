@@ -12,33 +12,28 @@ main(int argc, char *argv[])
         return 1;
     }
 
-    CfgEntry entries[64];
-    char err[MAX_ERR_LEN + 1];
-    int num_entries = cfg_load(argv[1], entries, 64, err);
+    Cfg cfg;
+    CfgEntry *entries = malloc(64 * sizeof(CfgEntry));
 
-    if (num_entries < 0) {
-        fprintf(stderr, "%s\n", err);
+    if (entries == NULL) {
+        fprintf(stderr, "Error: memory allocation failed\n");
         return 1;
     }
 
-    for (int i = 0; i < num_entries; i++) {
-        fprintf(stdout, "%s: ", entries[i].key);
+    cfg_init(&cfg, entries, 64);
 
-        switch (entries[i].type) {
-        case TYPE_STR:
-            fprintf(stdout, "%s\n", entries[i].val.str);
-            break;
-        case TYPE_INT:
-            fprintf(stdout, "%d\n", entries[i].val.int_);
-            break;
-        case TYPE_FLOAT:
-            fprintf(stdout, "%f\n", entries[i].val.float_);
-            break;
-        default:
-            fprintf(stderr, "Error: unknown type\n");
-            return 1;
-        }
+    char err[MAX_ERR_LEN + 1];
+    int res = cfg_load(argv[1], &cfg, err);
+
+    if (res != 0) {
+        fprintf(stderr, "%s\n", err);
+        free(entries);
+        return 1;
     }
 
+    cfg_print(cfg);
+    printf("%d\n", cfg_get_int(cfg, "fontSize", 30));
+
+    free(entries);
     return 0;
 }

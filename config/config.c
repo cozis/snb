@@ -70,12 +70,16 @@ skip_whitespace()
         scanner.cur++;
 }
 
+void
+cfg_init(Cfg *cfg, CfgEntry *entries, int max_entries)
+{
+    cfg->entries = entries;
+    cfg->max_entries = max_entries;
+    cfg->size = 0;
+}
+
 int
-cfg_parse(const char *src,
-          int src_len,
-          CfgEntry *entries,
-          int max_entries,
-          char *err)
+cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
 {
     int i = 0;
     int count = 0;
@@ -84,7 +88,7 @@ cfg_parse(const char *src,
     // Skip leading whitespace
     skip_whitespace();
 
-    while (!is_at_end() && count < max_entries) {
+    while (!is_at_end() && count < cfg->max_entries) {
         // Missing key
         if (is_at_end() || !is_key(peek())) {
             char *fmt = "CfgError: missing key in entry %d";
@@ -95,9 +99,9 @@ cfg_parse(const char *src,
         // Consume key
         i = 0;
         while (!is_at_end() && i < MAX_KEY_LEN && is_key(peek()))
-            entries[count].key[i++] = advance();
+            cfg->entries[count].key[i++] = advance();
 
-        entries[count].key[i++] = '\0';
+        cfg->entries[count].key[i++] = '\0';
 
         // Skip whitespace between the key and ':'
         skip_whitespace();
@@ -125,20 +129,20 @@ cfg_parse(const char *src,
         char c = peek();
 
         if (isalpha(c) || ispunct(c)) {
-            entries[count].type = TYPE_STR;
+            cfg->entries[count].type = TYPE_STR;
             i = 0;
 
             // Copy all the value
             while (!is_at_end() && i < MAX_VAL_LEN && is_value(peek()))
-                entries[count].val.str[i++] = advance();
+                cfg->entries[count].val.str[i++] = advance();
             i--;
 
             // Remove trailing whitespace
-            while (i > 0 && isblank(entries[count].val.str[i]))
+            while (i > 0 && isblank(cfg->entries[count].val.str[i]))
                 i--;
 
-            entries[count].val.str[++i] = '\0';
-            rm_dup_whitespace(entries[count].val.str);
+            cfg->entries[count].val.str[++i] = '\0';
+            rm_dup_whitespace(cfg->entries[count].val.str);
         } else if (isdigit(c)) {
             bool is_float = false;
             int int_part = 0;
@@ -159,11 +163,11 @@ cfg_parse(const char *src,
                     div *= 10;
                 }
 
-                entries[count].type = TYPE_FLOAT;
-                entries[count].val.float_ = int_part + (fract_part / div);
+                cfg->entries[count].type = TYPE_FLOAT;
+                cfg->entries[count].val.float_ = int_part + (fract_part / div);
             } else {
-                entries[count].type = TYPE_INT;
-                entries[count].val.int_ = int_part;
+                cfg->entries[count].type = TYPE_INT;
+                cfg->entries[count].val.int_ = int_part;
             }
         } else {
             char *fmt = "CfgError: invalid value in entry %d";
@@ -177,11 +181,12 @@ cfg_parse(const char *src,
         skip_whitespace();
     }
 
-    return count;
+    cfg->size = count;
+    return 0;
 }
 
 int
-cfg_load(const char *filename, CfgEntry *entries, int max_entries, char *err)
+cfg_load(const char *filename, Cfg *cfg, char *err)
 {
     char *ext = strrchr(filename, '.');
     if (strcmp(ext, ".cfg") != 0) {
@@ -218,32 +223,30 @@ cfg_load(const char *filename, CfgEntry *entries, int max_entries, char *err)
 
     src[size] = '\0';
 
-    int entries_size = cfg_parse(src, strlen(src), entries, max_entries, err);
+    int entries_size = cfg_parse(src, strlen(src), cfg, err);
 
     free(src);
     return entries_size;
 }
 
 int
-cfg_get_int(CfgEntry *entries, int entries_size, const char *key, int default_)
+cfg_get_int(Cfg cfg, const char *key, int default_)
 {
-    for (int i = entries_size - 1; i >= 0; i--) {
-        if (entries[i].type == TYPE_INT && !strcmp(key, entries[i].key))
-            return entries[i].val.int_;
+    for (int i = cfg.size - 1; i >= 0; i--) {
+        if (cfg.entries[i].type == TYPE_INT && !strcmp(key, cfg.entries[i].key))
+            return cfg.entries[i].val.int_;
     }
 
     return default_;
 }
 
 float
-cfg_get_float(CfgEntry *entries,
-              int entries_size,
-              const char *key,
-              float default_)
+cfg_get_float(Cfg cfg, const char *key, float default_)
 {
-    for (int i = entries_size - 1; i >= 0; i--) {
-        if (entries[i].type == TYPE_FLOAT && !strcmp(key, entries[i].key)) {
-            return entries[i].val.float_;
+    for (int i = cfg.size - 1; i >= 0; i--) {
+        if (cfg.entries[i].type == TYPE_FLOAT &&
+            !strcmp(key, cfg.entries[i].key)) {
+            return cfg.entries[i].val.float_;
         }
     }
 
@@ -251,15 +254,34 @@ cfg_get_float(CfgEntry *entries,
 }
 
 char *
-cfg_get_str(CfgEntry *entries,
-            int entries_size,
-            const char *key,
-            char *default_)
+cfg_get_str(Cfg cfg, const char *key, char *default_)
 {
-    for (int i = entries_size - 1; i >= 0; i--) {
-        if (entries[i].type == TYPE_STR && !strcmp(key, entries[i].key))
-            return entries[i].val.str;
+    for (int i = cfg.size - 1; i >= 0; i--) {
+        if (cfg.entries[i].type == TYPE_STR && !strcmp(key, cfg.entries[i].key))
+            return cfg.entries[i].val.str;
     }
 
     return default_;
+}
+
+void
+cfg_print(Cfg cfg)
+{
+    for (int i = 0; i < cfg.size; i++) {
+        fprintf(stdout, "%s: ", cfg.entries[i].key);
+
+        switch (cfg.entries[i].type) {
+        case TYPE_STR:
+            fprintf(stdout, "%s\n", cfg.entries[i].val.str);
+            break;
+        case TYPE_INT:
+            fprintf(stdout, "%d\n", cfg.entries[i].val.int_);
+            break;
+        case TYPE_FLOAT:
+            fprintf(stdout, "%f\n", cfg.entries[i].val.float_);
+            break;
+        default:
+            fprintf(stderr, "CfgError: unknown type\n");
+        }
+    }
 }

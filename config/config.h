@@ -17,46 +17,36 @@ typedef struct {
     } val;
 } CfgEntry;
 
-int cfg_parse(const char *src,
-              int src_len,
-              CfgEntry *entries,
-              int max_entries,
-              char *err);
+typedef struct {
+    CfgEntry *entries;
+    int max_entries;
+    int size;
+} Cfg;
 
-int cfg_load(const char *filename,
-             CfgEntry *entries,
-             int max_entries,
-             char *err);
+void cfg_init(Cfg *cfg, CfgEntry *entries, int max_entries);
 
-int cfg_get_int(CfgEntry *entries,
-                int entries_size,
-                const char *key,
-                int default_);
+int cfg_parse(const char *src, int src_len, Cfg *cfg, char *err);
+int cfg_load(const char *filename, Cfg *cfg, char *err);
 
-float cfg_get_float(CfgEntry *entries,
-                    int entries_size,
-                    const char *key,
-                    float default_);
+int cfg_get_int(Cfg cfg, const char *key, int default_);
+float cfg_get_float(Cfg cfg, const char *key, float default_);
+char *cfg_get_str(Cfg cfg, const char *key, char *default_);
 
-char *cfg_get_str(CfgEntry *entries,
-                  int entries_size,
-                  const char *key,
-                  char *default_);
-
-void cfg_dump();
-void cfg_free();
+void cfg_print(Cfg cfg);
 
 #endif
 
-// Approximate EBNF Grammar
+// EBNF Grammar
 
-// cfg  ::= line*
-// line ::= key ":" val "\n"
-// key  ::= str
-// val  ::= str | int | float
+// cfg   ::= line*
+// line  ::= key ":" val "\n"
+// key   ::= (alpha | ".")+
+// val   ::= str | int | float
 
-// str   ::= alpha+
+// str   ::= (alpha | punct) (alpha | punct | digit | blank)*
 // alpha ::= "a" ... "z" | "A" ... "Z"
+// punct ::= "." | ":" | "~" | "!" | ...
+// blank ::= " " | "\t"
 
 // int   ::= digit+
 // float ::= digit+ "." digit+
