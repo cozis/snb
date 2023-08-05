@@ -111,7 +111,7 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
         // Missing key
         if (is_at_end() || !is_key(peek())) {
             char *fmt = "CfgError: missing key in entry %d";
-            snprintf(err, MAX_ERR_LEN, fmt, count + 1);
+            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
         }
 
@@ -127,7 +127,7 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
 
         if (is_at_end() || peek() != ':') {
             char *fmt = "CfgError: ':' expected in entry %d";
-            snprintf(err, MAX_ERR_LEN, fmt, count + 1);
+            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
         }
 
@@ -140,7 +140,7 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
         // Missing value
         if (is_at_end() || peek() == '\n') {
             char *fmt = "CfgError: missing value in entry %d";
-            snprintf(err, MAX_ERR_LEN, fmt, count + 1);
+            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
         }
 
@@ -190,7 +190,7 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
             }
         } else {
             char *fmt = "CfgError: invalid value in entry %d";
-            snprintf(err, MAX_ERR_LEN, fmt, count + 1);
+            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
             return -1;
         }
 
@@ -209,14 +209,14 @@ cfg_load(const char *filename, Cfg *cfg, char *err)
 {
     char *ext = strrchr(filename, '.');
     if (strcmp(ext, ".cfg") != 0) {
-        strncpy(err, "CfgError: invalid file extension", MAX_ERR_LEN);
+        strncpy(err, "CfgError: invalid file extension", MAX_ERR_LEN + 1);
         return -1;
     }
 
     FILE *file = fopen(filename, "r");
 
     if (!file) {
-        strncpy(err, "CfgError: failed to open the file", MAX_ERR_LEN);
+        strncpy(err, "CfgError: failed to open the file", MAX_ERR_LEN + 1);
         return -1;
     }
 
@@ -227,7 +227,7 @@ cfg_load(const char *filename, Cfg *cfg, char *err)
     char *src = malloc(size + 1);
 
     if (src == NULL) {
-        strncpy(err, "CfgError: memory allocation failed", MAX_ERR_LEN);
+        strncpy(err, "CfgError: memory allocation failed", MAX_ERR_LEN + 1);
         return -1;
     }
 
@@ -235,7 +235,7 @@ cfg_load(const char *filename, Cfg *cfg, char *err)
     fclose(file);
 
     if (bytes_read != size) {
-        strncpy(err, "CfgError: failed to read the file", MAX_ERR_LEN);
+        strncpy(err, "CfgError: failed to read the file", MAX_ERR_LEN + 1);
         free(src);
         return -1;
     }
