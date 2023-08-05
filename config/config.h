@@ -48,6 +48,6 @@ void cfg_print(Cfg cfg);
 // punct ::= "." | ":" | "~" | "!" | ...
 // blank ::= " " | "\t"
 
-// int   ::= digit+
-// float ::= digit+ "." digit+
+// int   ::= "-"? digit+
+// float ::= "-"? digit+ "." digit+
 // digit ::= "0" ... "9"

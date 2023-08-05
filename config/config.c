@@ -63,6 +63,12 @@ peek()
     return scanner.src[scanner.cur];
 }
 
+static char
+peek_next()
+{
+    return scanner.src[scanner.cur + 1];
+}
+
 static int
 cur()
 {
@@ -170,7 +176,39 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
         // Consume value
         char c = peek();
 
-        if (isalpha(c) || ispunct(c)) {
+        if (isdigit(c) || (c == '-' && isdigit(peek_next()))) {
+            bool is_neg = false;
+            bool is_float = false;
+            int int_part = 0;
+            float fract_part = 0;
+
+            if (c == '-' && isdigit(peek_next())) {
+                advance();
+                is_neg = true;
+            }
+
+            while (!is_at_end() && isdigit(peek()))
+                int_part = int_part * 10 + (advance() - '0');
+
+            if (!is_at_end() && peek() == '.') {
+                advance();
+                is_float = true;
+            }
+
+            if (is_float) {
+                int div = 1;
+                while (!is_at_end() && isdigit(peek())) {
+                    fract_part = fract_part * 10 + (advance() - '0');
+                    div *= 10;
+                }
+                float float_ = int_part + (fract_part / div);
+                cfg->entries[count].type = TYPE_FLOAT;
+                cfg->entries[count].val.float_ = is_neg ? -1 * float_ : float_;
+            } else {
+                cfg->entries[count].type = TYPE_INT;
+                cfg->entries[count].val.int_ = is_neg ? -1 * int_part : int_part;
+            }
+        } else if (isalpha(c) || ispunct(c)) {
             cfg->entries[count].type = TYPE_STR;
 
             int val_offset = cur();
@@ -198,32 +236,6 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
 
             cfg->entries[count].val.str[++i] = '\0';
             remove_dup_blank(cfg->entries[count].val.str);
-        } else if (isdigit(c)) {
-            bool is_float = false;
-            int int_part = 0;
-            float fract_part = 0;
-
-            while (!is_at_end() && isdigit(peek()))
-                int_part = int_part * 10 + (advance() - '0');
-
-            if (!is_at_end() && peek() == '.') {
-                advance();
-                is_float = true;
-            }
-
-            if (is_float) {
-                int div = 1;
-                while (!is_at_end() && isdigit(peek())) {
-                    fract_part = fract_part * 10 + (advance() - '0');
-                    div *= 10;
-                }
-
-                cfg->entries[count].type = TYPE_FLOAT;
-                cfg->entries[count].val.float_ = int_part + (fract_part / div);
-            } else {
-                cfg->entries[count].type = TYPE_INT;
-                cfg->entries[count].val.int_ = int_part;
-            }
         } else {
             char *fmt = "CfgError: invalid value in entry %d";
             snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
@@ -299,8 +311,7 @@ float
 cfg_get_float(Cfg cfg, const char *key, float default_)
 {
     for (int i = cfg.size - 1; i >= 0; i--) {
-        if (cfg.entries[i].type == TYPE_FLOAT &&
-            !strcmp(key, cfg.entries[i].key)) {
+        if (cfg.entries[i].type == TYPE_FLOAT && !strcmp(key, cfg.entries[i].key)) {
             return cfg.entries[i].val.float_;
         }
     }
