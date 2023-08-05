@@ -294,6 +294,44 @@ static void dropSelection(BufferView *bufview)
     bufview->select_second = 0;
 }
 
+static void drawSelection(BufferView *bufview, GapBufferLine line, 
+                          float line_x, float line_y, 
+                          float line_h, size_t line_offset)
+{
+    if (!somethingSelected(bufview))
+        return;
+        
+    size_t select_start = MIN(bufview->select_first, bufview->select_second);
+    size_t select_end   = MAX(bufview->select_first, bufview->select_second);
+
+    if (select_start >= line_offset + line.len || select_end < line_offset)
+        return;
+
+    size_t select_in_line_start;
+    size_t select_in_line_end;
+
+    if (select_start < line_offset)
+        select_in_line_start = 0;
+    else
+        select_in_line_start = select_start - line_offset;
+
+    if (select_end < line_offset + line.len)
+        select_in_line_end = select_end - line_offset;
+    else
+        select_in_line_end = line.len;
+
+    Font       font = bufview->loaded_font;
+    float font_size = bufview->loaded_font_size;
+
+    Rectangle selection_rect = {
+        .x = line_x + stringRenderWidth(font, font_size, line.str, select_in_line_start),
+        .y = line_y,
+        .width  = stringRenderWidth(font, font_size, line.str + select_in_line_start, select_in_line_end - select_in_line_start),
+        .height = line_h,
+    };
+    DrawRectangleRec(selection_rect, LIGHTGRAY);
+}
+
 static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area)
 {
     BufferView *bufview = (BufferView*) widget;
@@ -332,40 +370,8 @@ static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area)
     size_t  line_count = 0;
     while (GapBufferIter_next(&iter, &line)) {
 
-        if (somethingSelected(bufview)) {
+        drawSelection(bufview, line, line_x, line_y, line_h, line_offset);
         
-            size_t select_start = MIN(bufview->select_first, bufview->select_second);
-            size_t select_end   = MAX(bufview->select_first, bufview->select_second);
-
-            bool   line_selected = true;
-            size_t select_in_line_start;
-
-            if (select_start >= line_offset + line.len || select_end < line_offset)
-                line_selected = false;
-            else if (select_start < line_offset)
-                select_in_line_start = 0;
-            else
-                select_in_line_start = select_start - line_offset;
-
-            if (line_selected) {
-
-                size_t select_in_line_end;
-
-                if (select_end < line_offset + line.len)
-                    select_in_line_end = select_end - line_offset;
-                else
-                    select_in_line_end = line.len;
-
-                Rectangle selection_rect = {
-                    .x = line_x + stringRenderWidth(font, font_size, line.str, select_in_line_start),
-                    .y = line_y,
-                    .width  = stringRenderWidth(font, font_size, line.str + select_in_line_start, select_in_line_end - select_in_line_start),
-                    .height = line_h,
-                };
-                DrawRectangleRec(selection_rect, LIGHTGRAY);
-            }
-        }
-            
         float line_w = renderString(font, line.str, line.len, 
                                     line_x, line_y, font_size, 
                                     font_color);
