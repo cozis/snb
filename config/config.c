@@ -63,6 +63,12 @@ peek()
     return scanner.src[scanner.cur];
 }
 
+static int
+cur()
+{
+    return scanner.cur;
+}
+
 static void
 skip_whitespace()
 {
@@ -116,11 +122,22 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
         }
 
         // Consume key
-        i = 0;
-        while (!is_at_end() && i < MAX_KEY_LEN && is_key(peek()))
-            cfg->entries[count].key[i++] = advance();
+        int key_offset = cur();
 
-        cfg->entries[count].key[i++] = '\0';
+        do
+            advance();
+        while (!is_at_end() && is_key(peek()));
+
+        int key_len = cur() - key_offset;
+
+        if (key_len > MAX_KEY_LEN) {
+            char *fmt = "CfgError: key too long in entry %d";
+            snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
+            return -1;
+        }
+
+        memcpy(cfg->entries[count].key, src + key_offset, key_len);
+        cfg->entries[count].key[key_len] = '\0';
 
         // Skip whitespace between the key and ':'
         skip_whitespace();
