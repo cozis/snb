@@ -23,7 +23,7 @@ init_scanner(const char *src, int src_len)
 }
 
 static void
-rm_dup_whitespace(char *str)
+remove_dup_blank(char *str)
 {
     int j = 0;
     for (int i = 0; str[i] != '\0'; i++) {
@@ -76,6 +76,13 @@ skip_whitespace()
         advance();
 }
 
+static void
+skip_blank()
+{
+    while (!is_at_end() && isblank(peek()))
+        advance();
+}
+
 void
 skip_comments()
 {
@@ -106,11 +113,10 @@ cfg_init(Cfg *cfg, CfgEntry *entries, int max_entries)
 int
 cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
 {
-    int i = 0;
     int count = 0;
     init_scanner(src, src_len);
 
-    // Skip whitespace and comments
+    // Skip initial whitespace and comments
     skip_whitespace_and_comments();
 
     while (!is_at_end() && count < cfg->max_entries) {
@@ -139,8 +145,8 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
         memcpy(cfg->entries[count].key, src + key_offset, key_len);
         cfg->entries[count].key[key_len] = '\0';
 
-        // Skip whitespace between the key and ':'
-        skip_whitespace();
+        // Skip blank between the key and ':'
+        skip_blank();
 
         if (is_at_end() || peek() != ':') {
             char *fmt = "CfgError: ':' expected in entry %d";
@@ -151,8 +157,8 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
         // Consume ':'
         advance();
 
-        // Skip whitespace between ':' and value
-        skip_whitespace();
+        // Skip blank between ':' and value
+        skip_blank();
 
         // Missing value
         if (is_at_end() || peek() == '\n') {
@@ -166,19 +172,32 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
 
         if (isalpha(c) || ispunct(c)) {
             cfg->entries[count].type = TYPE_STR;
-            i = 0;
 
-            // Copy all the value
-            while (!is_at_end() && i < MAX_VAL_LEN && is_value(peek()))
-                cfg->entries[count].val.str[i++] = advance();
-            i--;
+            int val_offset = cur();
 
-            // Remove trailing whitespace
-            while (i > 0 && isblank(cfg->entries[count].val.str[i]))
+            do
+                advance();
+            while (!is_at_end() && is_value(peek()));
+
+            int val_len = cur() - val_offset;
+
+            if (val_len > MAX_VAL_LEN) {
+                char *fmt = "CfgError: value too long in entry %d";
+                snprintf(err, MAX_ERR_LEN + 1, fmt, count + 1);
+                return -1;
+            }
+
+            memcpy(cfg->entries[count].val.str, src + val_offset, val_len);
+            cfg->entries[count].val.str[val_len] = '\0';
+
+            int i = strlen(cfg->entries[count].val.str) - 1;
+
+            // Remove trailing blank
+            while (i >= 0 && isblank(cfg->entries[count].val.str[i]))
                 i--;
 
             cfg->entries[count].val.str[++i] = '\0';
-            rm_dup_whitespace(cfg->entries[count].val.str);
+            remove_dup_blank(cfg->entries[count].val.str);
         } else if (isdigit(c)) {
             bool is_float = false;
             int int_part = 0;
