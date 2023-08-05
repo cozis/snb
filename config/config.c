@@ -66,6 +66,8 @@ peek()
 static char
 peek_next()
 {
+    if (scanner.cur >= scanner.len - 1)
+        return '\0';
     return scanner.src[scanner.cur + 1];
 }
 
