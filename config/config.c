@@ -118,8 +118,8 @@ check_literal(int offset, const char *literal, int len)
 static int
 error(const char *fmt, char *err, ...)
 {
-    const char *prefix = "CfgError: ";
-    const int prefix_len = strlen(prefix);
+    const char prefix[] = "CfgError: ";
+    const int prefix_len = sizeof(prefix) - 1;
 
     va_list vargs;
     va_start(vargs, err);
