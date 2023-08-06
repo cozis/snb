@@ -173,11 +173,11 @@ int main(int argc, char **argv)
     base_style = (WidgetStyle) {
         .scrollbar_thumb_roundness = 0.5,
         .scrollbar_thumb_segments  = 5,
-        .scrollbar_thumb_width     = 10,
+        .scrollbar_thumb_width     = 15,
         .scrollbar_thumb_margin    = 3,
 
         .scrollbar_track_color        = LIGHTGRAY,
-        .scrollbar_thumb_color        = DARKGREEN,
+        .scrollbar_thumb_color        = (Color) {0xd8, 0x6f, 0x00, 0xff},
         .scrollbar_thumb_active_color = GREEN,
     };
 

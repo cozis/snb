@@ -118,7 +118,7 @@ static int drinkFromProgram(const char *cmd, char *dst, size_t max)
     return res;
 }
 
-static int chooseFileRaylib(char *dst, size_t max)
+static int chooseFileToOpenRaylib(char *dst, size_t max)
 {
     return drinkFromProgram(SNB_DIALOG, dst, max);
 }
@@ -129,7 +129,7 @@ static void removeTrailingNewline(char *str, int *len)
         str[--(*len)] = '\0';
 }
 
-static int chooseFileZenity(char *dst, size_t max)
+static int chooseFileToOpenZenity(char *dst, size_t max)
 {
     int res = drinkFromProgram("zenity --file-selection", dst, max);
     removeTrailingNewline(dst, &res); // Zenity returns a newline at the end of the output
@@ -142,13 +142,30 @@ static bool zenityMissing(void)
     return stream == NULL || pclose(stream) != 0;
 }
 
-int chooseFile(char *dst, size_t max)
+int chooseFileToOpen(char *dst, size_t max)
 {
     int res;
     if (zenityMissing())
-        res = chooseFileRaylib(dst, max);
+        res = chooseFileToOpenRaylib(dst, max);
     else
-        res = chooseFileZenity(dst, max);
+        res = chooseFileToOpenZenity(dst, max);
+    return res;
+}
+
+static int chooseFileToSaveZenity(char *dst, size_t max)
+{
+    int res = drinkFromProgram("zenity --file-selection --save --confirm-overwrite", dst, max);
+    removeTrailingNewline(dst, &res); // Zenity returns a newline at the end of the output
+    return res;
+}
+
+int chooseFileToSave(char *dst, size_t max)
+{
+    int res;
+    if (zenityMissing())
+        res = -1;
+    else
+        res = chooseFileToSaveZenity(dst, max);
     return res;
 }
 

@@ -146,6 +146,32 @@ static Rectangle getVerticalScrollTrackRegion(Widget *widget)
     return rect;
 }
 
+static Rectangle getVerticalScrollbarRegion(Widget *widget)
+{
+    float thumb_margin = widget->style->scrollbar_thumb_margin;
+
+    Rectangle rect = getVerticalScrollTrackRegion(widget);
+    rect.x -= thumb_margin;
+    rect.y -= thumb_margin;
+    rect.width  += 2 * thumb_margin;
+    rect.height += 2 * thumb_margin;
+
+    return rect;
+}
+
+static Rectangle getHorizontalScrollbarRegion(Widget *widget)
+{
+    float thumb_margin = widget->style->scrollbar_thumb_margin;
+
+    Rectangle rect = getHorizontalScrollTrackRegion(widget);
+    rect.x -= thumb_margin;
+    rect.y -= thumb_margin;
+    rect.width  += 2 * thumb_margin;
+    rect.height += 2 * thumb_margin;
+
+    return rect;
+}
+
 bool isBiggerThanViewport(Widget *widget)
 {
     return widget->last_logic_area.x > widget->last_area.x
@@ -199,9 +225,11 @@ static void drawScrollbars(Widget *widget)
         v_thumb_color = thumb_color;
     }
 
+    //DrawRectangleRec(getVerticalScrollbarRegion(widget), GRAY);
     DrawRectangleRounded(getVerticalScrollTrackRegion(widget), roundness, segments, track_color);
     DrawRectangleRounded(getVerticalScrollThumbRegion(widget), roundness, segments, v_thumb_color);
 
+    //DrawRectangleRec(getHorizontalScrollbarRegion(widget), GRAY);
     DrawRectangleRounded(getHorizontalScrollTrackRegion(widget), roundness, segments, track_color);
     DrawRectangleRounded(getHorizontalScrollThumbRegion(widget), roundness, segments, h_thumb_color);
 }
@@ -338,6 +366,8 @@ void freeWidget(Widget *widget)
     
     if (focus == widget)
         focus = NULL;
+    if (mouse_focus == widget)
+        mouse_focus = NULL;
 }
 
 void setFocus(Widget *widget)
