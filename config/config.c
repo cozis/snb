@@ -110,7 +110,7 @@ skip_whitespace_and_comments()
 static bool
 check_literal(int offset, const char *literal, int len)
 {
-    if (offset + len >= scanner.len)
+    if (offset + len > scanner.len)
         return false;
     return !strncmp(scanner.src + offset, literal, len);
 }
