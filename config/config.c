@@ -21,9 +21,11 @@ error(const char *fmt, char *err, int entry)
 }
 
 static bool
-check_literal(int offset, const char *kword, int len)
+check_literal(int offset, const char *literal, int len)
 {
-    return !strncmp(scanner.src + offset, kword, len);
+    if (offset + len >= scanner.len)
+        return false;
+    return !strncmp(scanner.src + offset, literal, len);
 }
 
 static void
@@ -180,11 +182,10 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
             advance();
 
             int val_offset = cur();
-            while (!is_at_end() && is_value(peek())) {
+            while (!is_at_end() && is_value(peek()))
                 advance();
-            }
 
-            if (peek() != '"')
+            if (is_at_end() || peek() != '"')
                 return error("CfgError: closing '\"' expected in entry %d", err,
                              count + 1);
 
@@ -313,44 +314,38 @@ cfg_load(const char *filename, Cfg *cfg, char *err)
     return res;
 }
 
+static void *
+get_val(Cfg cfg, const char *key, void *default_, CfgValType type)
+{
+    for (int i = cfg.size - 1; i >= 0; i--) {
+        if (cfg.entries[i].type == type && !strcmp(key, cfg.entries[i].key))
+            return &cfg.entries[i].val;
+    }
+    return default_;
+}
+
 char *
 cfg_get_str(Cfg cfg, const char *key, char *default_)
 {
-    for (int i = cfg.size - 1; i >= 0; i--) {
-        if (cfg.entries[i].type == TYPE_STR && !strcmp(key, cfg.entries[i].key))
-            return cfg.entries[i].val.str;
-    }
-    return default_;
+    return (char *) get_val(cfg, key, default_, TYPE_STR);
 }
 
 bool
 cfg_get_bool(Cfg cfg, const char *key, bool default_)
 {
-    for (int i = cfg.size - 1; i >= 0; i--) {
-        if (cfg.entries[i].type == TYPE_BOOL && !strcmp(key, cfg.entries[i].key))
-            return cfg.entries[i].val.bool_;
-    }
-    return default_;
+    return *(bool *) get_val(cfg, key, &default_, TYPE_BOOL);
 }
 
 int
 cfg_get_int(Cfg cfg, const char *key, int default_)
 {
-    for (int i = cfg.size - 1; i >= 0; i--) {
-        if (cfg.entries[i].type == TYPE_INT && !strcmp(key, cfg.entries[i].key))
-            return cfg.entries[i].val.int_;
-    }
-    return default_;
+    return *(int *) get_val(cfg, key, &default_, TYPE_INT);
 }
 
 float
 cfg_get_float(Cfg cfg, const char *key, float default_)
 {
-    for (int i = cfg.size - 1; i >= 0; i--) {
-        if (cfg.entries[i].type == TYPE_FLOAT && !strcmp(key, cfg.entries[i].key))
-            return cfg.entries[i].val.float_;
-    }
-    return default_;
+    return *(float *) get_val(cfg, key, &default_, TYPE_FLOAT);
 }
 
 void

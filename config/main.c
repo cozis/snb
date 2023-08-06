@@ -33,7 +33,11 @@ main(int argc, char *argv[])
     }
 
     cfg_print(cfg);
+
+    printf("%s\n", cfg_get_str(cfg, "font", "err"));
+    printf("%s\n", cfg_get_bool(cfg, "ruler", false) ? "true" : "false");
     printf("%d\n", cfg_get_int(cfg, "fontSize", 30));
+    printf("%f\n", cfg_get_float(cfg, "x", 5.5));
 
     free(entries);
     return 0;

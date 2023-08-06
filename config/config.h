@@ -9,15 +9,17 @@
 
 typedef enum { TYPE_STR, TYPE_BOOL, TYPE_INT, TYPE_FLOAT } CfgValType;
 
+typedef union {
+    char str[MAX_VAL_LEN + 1];
+    bool bool_;
+    int int_;
+    float float_;
+} CfgVal;
+
 typedef struct {
     char key[MAX_KEY_LEN + 1];
     CfgValType type;
-    union {
-        char str[MAX_VAL_LEN + 1];
-        bool bool_;
-        int int_;
-        float float_;
-    } val;
+    CfgVal val;
 } CfgEntry;
 
 typedef struct {
@@ -31,9 +33,10 @@ void cfg_init(Cfg *cfg, CfgEntry *entries, int max_entries);
 int cfg_parse(const char *src, int src_len, Cfg *cfg, char *err);
 int cfg_load(const char *filename, Cfg *cfg, char *err);
 
+char *cfg_get_str(Cfg cfg, const char *key, char *default_);
+bool cfg_get_bool(Cfg cfg, const char *key, bool default_);
 int cfg_get_int(Cfg cfg, const char *key, int default_);
 float cfg_get_float(Cfg cfg, const char *key, float default_);
-char *cfg_get_str(Cfg cfg, const char *key, char *default_);
 
 void cfg_print(Cfg cfg);
 
