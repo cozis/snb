@@ -269,19 +269,21 @@ void handleWidgetEvent(Widget *widget, Event event)
         case EVENT_MOUSE_MOVE:
         if (widget->scrolling) {
 
-            if (widget->scrolldir) {
+            Vector2 logic_area = getLastLogicDrawArea(widget);
 
+            if (widget->scrolldir) {
+                
                 // Scrolling vertically
-                float ratio = widget->last_logic_area.y / widget->last_area.y;
-                float delta = (event.mouse.y - widget->mouse_start) * ratio;
+                float track = getVerticalScrollTrackRegion(widget).height;
+                float delta = (event.mouse.y - widget->mouse_start) * logic_area.y / track;
                 widget->scroll.y = widget->scroll_start + delta;
                 widget->scroll.y = clampVerticalScrollValue(widget, widget->scroll.y);
 
             } else {
 
                 // Scrolling horizontally
-                float ratio = widget->last_logic_area.x / widget->last_area.x;
-                float delta = (event.mouse.x - widget->mouse_start) * ratio;
+                float track = getHorizontalScrollTrackRegion(widget).width;
+                float delta = (event.mouse.x - widget->mouse_start) * logic_area.x / track;
                 widget->scroll.x = widget->scroll_start + delta;
                 widget->scroll.x = clampHorizontalScrollValue(widget, widget->scroll.x);
             }
