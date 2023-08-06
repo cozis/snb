@@ -70,21 +70,3 @@ float cfg_get_float(Cfg cfg, const char *key, float default_);
 void cfg_print(Cfg cfg);
 
 #endif
-
-// EBNF Grammar
-
-// cfg   ::= line*
-// line  ::= key ':' val '\n'
-// key   ::= (alpha | '.')+
-// val   ::= str | bool | int | float
-
-// str   ::= '"' (alpha | punct | digit | blank)+ '"'
-// alpha ::= 'a' ... 'z' | 'A' ... 'Z'
-// punct ::= '.' | ':' | '~' | '!' | ...
-// blank ::= ' ' | '\t'
-
-// bool  ::= true | false
-
-// int   ::= '-'? digit+
-// float ::= '-'? digit+ '.' digit+
-// digit ::= '0' ... '9'

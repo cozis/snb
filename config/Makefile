@@ -10,7 +10,7 @@ config: main.c config.c
 	$(CC) $^ -o $@ $(CFLAGS)
 
 fuzz: fuzz.c config.c
-	clang -O1 -g -fsanitize=fuzzer,address $^ -o $@
+	clang -O1 -g -fsanitize=fuzzer,address,undefined $^ -o $@
 
 clean:
 	rm config fuzz
