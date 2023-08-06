@@ -118,9 +118,13 @@ check_literal(int offset, const char *literal, int len)
 static int
 error(const char *fmt, char *err, ...)
 {
+    const char *prefix = "CfgError: ";
+    const int prefix_len = strlen(prefix);
+
     va_list vargs;
     va_start(vargs, err);
-    vsnprintf(err, MAX_ERR_LEN + 1, fmt, vargs);
+    snprintf(err, MAX_ERR_LEN + 1, prefix);
+    vsnprintf(err + prefix_len, MAX_ERR_LEN - prefix_len + 1, fmt, vargs);
     va_end(vargs);
     return -1;
 }
@@ -145,7 +149,7 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
     while (!is_at_end() && count < cfg->max_entries) {
         // Missing key
         if (is_at_end() || !is_key(peek()))
-            return error("CfgError: missing key in entry %d", err, count + 1);
+            return error("missing key in entry %d", err, count + 1);
 
         // Consume key
         int key_offset = cur();
@@ -155,7 +159,7 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
         int key_len = cur() - key_offset;
 
         if (key_len > MAX_KEY_LEN)
-            return error("CfgError: key too long in entry %d", err, count + 1);
+            return error("key too long in entry %d", err, count + 1);
 
         memcpy(cfg->entries[count].key, src + key_offset, key_len);
         cfg->entries[count].key[key_len] = '\0';
@@ -164,7 +168,7 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
         skip_blank();
 
         if (is_at_end() || peek() != ':')
-            return error("CfgError: ':' expected in entry %d", err, count + 1);
+            return error("':' expected in entry %d", err, count + 1);
 
         // Consume ':'
         advance();
@@ -174,7 +178,7 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
 
         // Missing value
         if (is_at_end() || peek() == '\n')
-            return error("CfgError: missing value in entry %d", err, count + 1);
+            return error("missing value in entry %d", err, count + 1);
 
         // Consume value
         char c = peek();
@@ -188,44 +192,37 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
                 advance();
 
             if (is_at_end() || peek() != '"')
-                return error("CfgError: closing '\"' expected in entry %d", err,
-                             count + 1);
+                return error("closing '\"' expected in entry %d", err, count + 1);
 
             int val_len = cur() - val_offset;
             if (val_len > MAX_VAL_LEN)
-                return error("CfgError: value too long in entry %d", err, count + 1);
+                return error("value too long in entry %d", err, count + 1);
 
             // Consume closing '"'
             advance();
 
             memcpy(cfg->entries[count].val.str, src + val_offset, val_len);
             cfg->entries[count].val.str[val_len] = '\0';
-
-            int i = strlen(cfg->entries[count].val.str) - 1;
-            cfg->entries[count].val.str[++i] = '\0';
             cfg->entries[count].type = TYPE_STR;
         } else if (isalpha(c)) {
             bool bool_;
             switch (c) {
             case 't':
                 if (!check_literal(cur(), "true", 4))
-                    return error("CfgError: invalid literal in entry %d", err,
-                                 count + 1);
+                    return error("invalid literal in entry %d", err, count + 1);
                 // Consume "true"
                 advance2(4);
                 bool_ = true;
                 break;
             case 'f':
                 if (!check_literal(cur(), "false", 5))
-                    return error("CfgError: invalid literal in entry %d", err,
-                                 count + 1);
+                    return error("invalid literal in entry %d", err, count + 1);
                 // Consume "false"
                 advance2(5);
                 bool_ = false;
                 break;
             default:
-                return error("CfgError: invalid literal in entry %d", err,
-                             count + 1);
+                return error("invalid literal in entry %d", err, count + 1);
             }
             cfg->entries[count].val.bool_ = bool_;
             cfg->entries[count].type = TYPE_BOOL;
@@ -262,7 +259,7 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
                 cfg->entries[count].type = TYPE_INT;
             }
         } else {
-            return error("CfgError: invalid value in entry %d", err, count + 1);
+            return error("invalid value in entry %d", err, count + 1);
         }
 
         count++;
@@ -280,11 +277,11 @@ cfg_load(const char *filename, Cfg *cfg, char *err)
 {
     char *ext = strrchr(filename, '.');
     if (strcmp(ext, ".cfg") != 0)
-        return error("CfgError: invalid file extension", err);
+        return error("invalid file extension", err);
 
-    FILE *file = fopen(filename, "r");
+    FILE *file = fopen(filename, "rb");
     if (!file)
-        return error("CfgError: failed to open the file", err);
+        return error("failed to open the file", err);
 
     fseek(file, 0, SEEK_END);
     size_t size = ftell(file);
@@ -292,14 +289,14 @@ cfg_load(const char *filename, Cfg *cfg, char *err)
 
     char *src = malloc(size + 1);
     if (src == NULL)
-        return error("CfgError: memory allocation failed", err);
+        return error("memory allocation failed", err);
 
     size_t bytes_read = fread(src, sizeof(char), size, file);
     fclose(file);
 
     if (bytes_read != size) {
         free(src);
-        return error("CfgError: failed to read the file", err);
+        return error("failed to read the file", err);
     }
 
     src[size] = '\0';
@@ -351,7 +348,7 @@ cfg_print(Cfg cfg)
 
         switch (cfg.entries[i].type) {
         case TYPE_STR:
-            fprintf(stdout, "%s\n", cfg.entries[i].val.str);
+            fprintf(stdout, "\"%s\"\n", cfg.entries[i].val.str);
             break;
         case TYPE_BOOL:
             fprintf(stdout, "%s\n", cfg.entries[i].val.bool_ ? "true" : "false");
