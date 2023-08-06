@@ -125,7 +125,7 @@ static void manageEvents(Widget *root)
 
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
         clickOntoWidget(root);
-
+    
     if (mouse_focus && IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
         unclickFromWidget(mouse_focus);
 

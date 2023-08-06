@@ -28,7 +28,16 @@ Vector2 getLastDrawArea(Widget *widget)
 
 Vector2 getLastLogicDrawArea(Widget *widget)
 {
-    return widget->last_logic_area;
+    float thumb_margin = widget->style->scrollbar_thumb_margin;
+    float thumb_width  = widget->style->scrollbar_thumb_width;
+
+    Vector2       area = widget->last_area;
+    Vector2 logic_area = widget->last_logic_area;
+    
+    if (area.x < logic_area.x) logic_area.y += thumb_width + 2 * thumb_margin;
+    if (area.y < logic_area.y) logic_area.x += thumb_width + 2 * thumb_margin;
+    
+    return logic_area;
 }
 
 Vector2 getScroll(Widget *widget)
@@ -174,8 +183,8 @@ static Rectangle getHorizontalScrollbarRegion(Widget *widget)
 
 bool isBiggerThanViewport(Widget *widget)
 {
-    return widget->last_logic_area.x > widget->last_area.x
-        || widget->last_logic_area.y > widget->last_area.y;
+    return horizontalScrollbarShown(widget)
+        || verticalScrollbarShown(widget);
 }
 
 #define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
@@ -185,6 +194,9 @@ float clampVerticalScrollValue(Widget *widget, float value)
 {
     float min_scroll = 0;
     float max_scroll = widget->last_logic_area.y - widget->last_area.y;
+    if (horizontalScrollbarShown(widget))
+        max_scroll += getHorizontalScrollbarRegion(widget).height;
+
     value = MIN(max_scroll, value);
     value = MAX(min_scroll, value);
     return value;
@@ -194,6 +206,8 @@ float clampHorizontalScrollValue(Widget *widget, float value)
 {
     float min_scroll = 0;
     float max_scroll = widget->last_logic_area.x - widget->last_area.x;
+    if (verticalScrollbarShown(widget))
+        max_scroll += getVerticalScrollbarRegion(widget).width;
     value = MIN(max_scroll, value);
     value = MAX(min_scroll, value);
     return value;
