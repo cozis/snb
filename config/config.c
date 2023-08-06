@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,21 +13,6 @@ typedef struct {
 } Scanner;
 
 static Scanner scanner;
-
-static int
-error(const char *fmt, char *err, int entry)
-{
-    snprintf(err, MAX_ERR_LEN + 1, fmt, entry);
-    return -1;
-}
-
-static bool
-check_literal(int offset, const char *literal, int len)
-{
-    if (offset + len >= scanner.len)
-        return false;
-    return !strncmp(scanner.src + offset, literal, len);
-}
 
 static void
 init_scanner(const char *src, int src_len)
@@ -121,6 +107,24 @@ skip_whitespace_and_comments()
     }
 }
 
+static bool
+check_literal(int offset, const char *literal, int len)
+{
+    if (offset + len >= scanner.len)
+        return false;
+    return !strncmp(scanner.src + offset, literal, len);
+}
+
+static int
+error(const char *fmt, char *err, ...)
+{
+    va_list vargs;
+    va_start(vargs, err);
+    vsnprintf(err, MAX_ERR_LEN + 1, fmt, vargs);
+    va_end(vargs);
+    return -1;
+}
+
 void
 cfg_init(Cfg *cfg, CfgEntry *entries, int max_entries)
 {
@@ -138,8 +142,6 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
     // Skip initial whitespace and comments
     skip_whitespace_and_comments();
 
-    // FIXME: This could be a do-while
-    // FIXME: error() function
     while (!is_at_end() && count < cfg->max_entries) {
         // Missing key
         if (is_at_end() || !is_key(peek()))
@@ -277,34 +279,27 @@ int
 cfg_load(const char *filename, Cfg *cfg, char *err)
 {
     char *ext = strrchr(filename, '.');
-    if (strcmp(ext, ".cfg") != 0) {
-        strncpy(err, "CfgError: invalid file extension", MAX_ERR_LEN + 1);
-        return -1;
-    }
+    if (strcmp(ext, ".cfg") != 0)
+        return error("CfgError: invalid file extension", err);
 
     FILE *file = fopen(filename, "r");
-    if (!file) {
-        strncpy(err, "CfgError: failed to open the file", MAX_ERR_LEN + 1);
-        return -1;
-    }
+    if (!file)
+        return error("CfgError: failed to open the file", err);
 
     fseek(file, 0, SEEK_END);
     size_t size = ftell(file);
     rewind(file);
 
     char *src = malloc(size + 1);
-    if (src == NULL) {
-        strncpy(err, "CfgError: memory allocation failed", MAX_ERR_LEN + 1);
-        return -1;
-    }
+    if (src == NULL)
+        return error("CfgError: memory allocation failed", err);
 
     size_t bytes_read = fread(src, sizeof(char), size, file);
     fclose(file);
 
     if (bytes_read != size) {
-        strncpy(err, "CfgError: failed to read the file", MAX_ERR_LEN + 1);
         free(src);
-        return -1;
+        return error("CfgError: failed to read the file", err);
     }
 
     src[size] = '\0';
