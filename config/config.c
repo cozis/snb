@@ -227,17 +227,17 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
             cfg->entries[count].val.bool_ = bool_;
             cfg->entries[count].type = TYPE_BOOL;
         } else if (isdigit(c) || (c == '-' && isdigit(peek_next()))) {
-            bool is_neg = false;
             bool is_float = false;
+            int sign = 1;
             int int_part = 0;
             float fract_part = 0;
 
             if (c == '-' && isdigit(peek_next())) {
                 advance();
-                is_neg = true;
+                sign = -1;
             }
 
-            while (!is_at_end() && isdigit(peek()))
+            while (!is_at_end() && isdigit(peek()))  // DO-WHILE?
                 int_part = int_part * 10 + (advance() - '0');
 
             if (!is_at_end() && peek() == '.') {
@@ -252,10 +252,10 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
                     div *= 10;
                 }
                 float float_ = int_part + (fract_part / div);
-                cfg->entries[count].val.float_ = is_neg ? -1 * float_ : float_;
+                cfg->entries[count].val.float_ = sign * float_;
                 cfg->entries[count].type = TYPE_FLOAT;
             } else {
-                cfg->entries[count].val.int_ = is_neg ? -1 * int_part : int_part;
+                cfg->entries[count].val.int_ = sign * int_part;
                 cfg->entries[count].type = TYPE_INT;
             }
         } else {
