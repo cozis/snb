@@ -177,14 +177,33 @@ static void drawScrollbars(Widget *widget)
 {
     float   roundness = widget->style->scrollbar_thumb_roundness;
     int      segments = widget->style->scrollbar_thumb_segments;
-    Color thumb_color = widget->style->scrollbar_thumb_color;
     Color track_color = widget->style->scrollbar_track_color;
+    Color thumb_color = widget->style->scrollbar_thumb_color;
+    Color active_color = widget->style->scrollbar_thumb_active_color;
+
+    Color v_thumb_color;
+    Color h_thumb_color;
+    if (widget->scrolling) {
+        if (widget->scrolldir) {
+            // Scrolling vertically
+            h_thumb_color =  thumb_color;
+            v_thumb_color = active_color;
+        } else {
+            // Scrolling horizontally
+            h_thumb_color = active_color;
+            v_thumb_color =  thumb_color;
+        }
+    } else {
+        // Not scrolling
+        h_thumb_color = thumb_color;
+        v_thumb_color = thumb_color;
+    }
 
     DrawRectangleRounded(getVerticalScrollTrackRegion(widget), roundness, segments, track_color);
-    DrawRectangleRounded(getVerticalScrollThumbRegion(widget), roundness, segments, thumb_color);
+    DrawRectangleRounded(getVerticalScrollThumbRegion(widget), roundness, segments, v_thumb_color);
 
     DrawRectangleRounded(getHorizontalScrollTrackRegion(widget), roundness, segments, track_color);
-    DrawRectangleRounded(getHorizontalScrollThumbRegion(widget), roundness, segments, thumb_color);
+    DrawRectangleRounded(getHorizontalScrollThumbRegion(widget), roundness, segments, h_thumb_color);
 }
 
 void drawWidget(Widget *widget, Vector2 offset, Vector2 area)

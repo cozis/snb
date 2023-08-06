@@ -175,8 +175,10 @@ int main(int argc, char **argv)
         .scrollbar_thumb_segments  = 5,
         .scrollbar_thumb_width     = 10,
         .scrollbar_thumb_margin    = 3,
-        .scrollbar_thumb_color     = RED,
-        .scrollbar_track_color     = LIGHTGRAY,
+
+        .scrollbar_track_color        = LIGHTGRAY,
+        .scrollbar_thumb_color        = DARKGREEN,
+        .scrollbar_thumb_active_color = GREEN,
     };
 
     style = (BufferViewStyle) {

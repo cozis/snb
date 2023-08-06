@@ -13,10 +13,11 @@ typedef void    (*WidgetFuncHandleEvent)(Widget *widget, Event event);
 typedef struct {
     float scrollbar_thumb_roundness;
     int   scrollbar_thumb_segments;
-    Color scrollbar_thumb_color;
     float scrollbar_thumb_width;
     float scrollbar_thumb_margin;
     Color scrollbar_track_color;
+    Color scrollbar_thumb_color;
+    Color scrollbar_thumb_active_color;
 } WidgetStyle;
 
 struct Widget {
