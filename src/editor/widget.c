@@ -1,3 +1,4 @@
+#include <math.h> // fabs
 #include <stddef.h>
 #include "widget.h"
 
@@ -257,7 +258,9 @@ void drawWidget(Widget *widget, Vector2 offset, Vector2 area)
         logic_offset.x = - widget->scroll.x;
         logic_offset.y = - widget->scroll.y;
 
-        if (widget->target.texture.width != area.x || widget->target.texture.height != area.y) {
+        bool area_bigger_than_texture = fabs(widget->target.texture.width  - area.x) >= 1 
+                                     || fabs(widget->target.texture.height - area.y) >= 1;
+        if (area_bigger_than_texture) {
             UnloadRenderTexture(widget->target);
             widget->target.id = 0;
         }
