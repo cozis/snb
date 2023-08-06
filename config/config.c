@@ -89,7 +89,7 @@ skip_blank()
 }
 
 void
-skip_comments()
+skip_comment()
 {
     while (!is_at_end() && peek() == '#') {
         do
@@ -103,7 +103,7 @@ skip_whitespace_and_comments()
 {
     while (!is_at_end() && (isspace(peek()) || peek() == '#')) {
         skip_whitespace();
-        skip_comments();
+        skip_comment();
     }
 }
 
