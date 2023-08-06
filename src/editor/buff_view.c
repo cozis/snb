@@ -207,7 +207,7 @@ static void freeStructMemory(BufferView *bufview)
     used_buffers[i] = false;
 }
 
-Widget *createBufferView(BufferViewStyle *style)
+Widget *createBufferView(WidgetStyle *base_style, BufferViewStyle *style)
 {
     BufferView *bufview = allocStructMemory();
 
@@ -227,7 +227,7 @@ Widget *createBufferView(BufferViewStyle *style)
         }
     }
 
-    initWidget(&bufview->base, draw, free_, handleEvent);
+    initWidget(&bufview->base, base_style, draw, free_, handleEvent);
     bufview->style = style;
     bufview->loaded_font_path = NULL;
     bufview->loaded_font_size = 14;

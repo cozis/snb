@@ -29,4 +29,4 @@ typedef struct {
     char file[1024];
 } BufferView;
 
-Widget *createBufferView(BufferViewStyle *style);
+Widget *createBufferView(WidgetStyle *base_style, BufferViewStyle *style);

@@ -8,4 +8,4 @@ typedef enum {
     SPLIT_RIGHT,
 } SplitDirection;
 
-bool splitView(SplitDirection dir, Widget *old_widget, Widget *new_widget);
+bool splitView(WidgetStyle *base_style, SplitDirection dir, Widget *old_widget, Widget *new_widget);

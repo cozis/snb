@@ -1,9 +1,10 @@
 #include <stddef.h>
 #include "widget.h"
 
-void initWidget(Widget *widget, WidgetFuncDraw draw, 
+void initWidget(Widget *widget, WidgetStyle *style, WidgetFuncDraw draw, 
                 WidgetFuncFree free, WidgetFuncHandleEvent handleEvent)
 {
+    widget->style = style;
     widget->parent = NULL;
     widget->last_offset.x = 0;
     widget->last_offset.y = 0;
@@ -20,43 +21,127 @@ void initWidget(Widget *widget, WidgetFuncDraw draw,
     widget->handleEvent = handleEvent;
 }
 
+Vector2 getLastDrawArea(Widget *widget)
+{
+    return widget->last_area;
+}
+
+Vector2 getLastLogicDrawArea(Widget *widget)
+{
+    return widget->last_logic_area;
+}
+
+Vector2 getScroll(Widget *widget)
+{
+    return widget->scroll;
+}
+
+static bool horizontalScrollbarShown(Widget *widget)
+{
+    return getLastDrawArea(widget).x < getLastLogicDrawArea(widget).x;
+}
+
+static bool verticalScrollbarShown(Widget *widget)
+{
+    return getLastDrawArea(widget).y < getLastLogicDrawArea(widget).y;
+}
+
 static Rectangle getVerticalScrollThumbRegion(Widget *widget)
 {
-    Vector2 scroll = widget->scroll;
-    Vector2 area = widget->last_area;
-    Vector2 logic_area = widget->last_logic_area;
-    float ratio = area.y / logic_area.y;
+    Vector2     scroll = getScroll(widget);
+    Vector2       area = getLastDrawArea(widget);
+    Vector2 logic_area = getLastLogicDrawArea(widget);
+
+    float thumb_margin = widget->style->scrollbar_thumb_margin;
+    float thumb_width  = widget->style->scrollbar_thumb_width;
+
+    float track_h = area.y - 2 * thumb_margin;
+    if (horizontalScrollbarShown(widget))
+        track_h -= thumb_width + thumb_margin;
 
     Rectangle rect;
 
     if (logic_area.y > area.y)
-        rect.height = area.y * ratio;
+        rect.height = track_h * area.y / logic_area.y;
     else
         rect.height = 0;
 
-    rect.width = 20;
-    rect.x = area.x - rect.width;
-    rect.y = scroll.y * ratio;
+    rect.width = thumb_width;
+    rect.x = area.x - rect.width - thumb_margin;
+    rect.y = scroll.y * track_h / logic_area.y + thumb_margin;
+
     return rect;
 }
 
 static Rectangle getHorizontalScrollThumbRegion(Widget *widget)
 {
-    Vector2 scroll = widget->scroll;
-    Vector2 area = widget->last_area;
-    Vector2 logic_area = widget->last_logic_area;
-    float ratio = area.x / logic_area.x;
+    Vector2 scroll = getScroll(widget);
+    Vector2 area = getLastDrawArea(widget);
+    Vector2 logic_area = getLastLogicDrawArea(widget);
+
+    float thumb_margin = widget->style->scrollbar_thumb_margin;
+    float thumb_width  = widget->style->scrollbar_thumb_width;
+
+    float track_w = area.x - 2 * thumb_margin;
+    if (verticalScrollbarShown(widget))
+        track_w -= thumb_width + thumb_margin;
 
     Rectangle rect;
 
     if (logic_area.x > area.x)
-        rect.width = area.x * ratio;
+        rect.width = track_w * area.x / logic_area.x;
     else
         rect.width = 0;
 
-    rect.height = 20;
-    rect.x = scroll.x * ratio;
-    rect.y = area.y - rect.height;
+    rect.height = thumb_width;
+    rect.x = scroll.x * track_w / logic_area.x + thumb_margin;
+    rect.y = area.y - rect.height - thumb_margin;
+
+    return rect;
+}
+
+static Rectangle getHorizontalScrollTrackRegion(Widget *widget)
+{
+    Vector2 area = getLastDrawArea(widget);
+
+    float thumb_margin = widget->style->scrollbar_thumb_margin;
+    float thumb_width  = widget->style->scrollbar_thumb_width;
+
+    Rectangle rect;
+
+    if (horizontalScrollbarShown(widget)) {
+        rect.width = area.x - 2 * thumb_margin;
+        if (verticalScrollbarShown(widget))
+            rect.width -= thumb_width + thumb_margin;
+    } else
+        rect.width = 0;
+
+    rect.height = thumb_width;
+    rect.x = thumb_margin;
+    rect.y = area.y - rect.height - thumb_margin;
+
+    return rect;
+}
+
+static Rectangle getVerticalScrollTrackRegion(Widget *widget)
+{
+    Vector2 area = getLastDrawArea(widget);
+
+    float thumb_margin = widget->style->scrollbar_thumb_margin;
+    float thumb_width  = widget->style->scrollbar_thumb_width;
+
+    Rectangle rect;
+
+    if (verticalScrollbarShown(widget)) {
+        rect.height = area.y - 2 * thumb_margin;
+        if (horizontalScrollbarShown(widget))
+            rect.height -= thumb_width + thumb_margin;
+    } else
+        rect.height = 0;
+
+    rect.width = thumb_width;
+    rect.x = area.x - rect.width - thumb_margin;
+    rect.y = thumb_margin;
 
     return rect;
 }
@@ -88,6 +173,20 @@ float clampHorizontalScrollValue(Widget *widget, float value)
     return value;
 }
 
+static void drawScrollbars(Widget *widget)
+{
+    float   roundness = widget->style->scrollbar_thumb_roundness;
+    int      segments = widget->style->scrollbar_thumb_segments;
+    Color thumb_color = widget->style->scrollbar_thumb_color;
+    Color track_color = widget->style->scrollbar_track_color;
+
+    DrawRectangleRounded(getVerticalScrollTrackRegion(widget), roundness, segments, track_color);
+    DrawRectangleRounded(getVerticalScrollThumbRegion(widget), roundness, segments, thumb_color);
+
+    DrawRectangleRounded(getHorizontalScrollTrackRegion(widget), roundness, segments, track_color);
+    DrawRectangleRounded(getHorizontalScrollThumbRegion(widget), roundness, segments, thumb_color);
+}
+
 void drawWidget(Widget *widget, Vector2 offset, Vector2 area)
 {
     Vector2 logic_area;
@@ -108,8 +207,7 @@ void drawWidget(Widget *widget, Vector2 offset, Vector2 area)
         BeginTextureMode(widget->target);
         DrawRectangle(0, 0, area.x, area.y, WHITE);
         logic_area = widget->draw(widget, logic_offset, area);
-        DrawRectangleRec(getVerticalScrollThumbRegion(widget), RED);
-        DrawRectangleRec(getHorizontalScrollThumbRegion(widget), RED);
+        drawScrollbars(widget);
         EndTextureMode();
 
         Rectangle src, dst;

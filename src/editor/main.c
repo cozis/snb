@@ -16,7 +16,8 @@
 #define MAX_FONT_SIZE 100
 #define INC_FONT_SIZE 2
 
-static BufferViewStyle style;
+static BufferViewStyle  style;
+static WidgetStyle base_style;
 
 static void openFileIntoWidget(Widget *widget, const char *file)
 {
@@ -68,11 +69,11 @@ static void split(SplitDirection dir)
     if (!focus)
         return;
 
-    Widget *new_widget = createBufferView(&style);
+    Widget *new_widget = createBufferView(&base_style, &style);
     if (!new_widget)
         return;
 
-    if (!splitView(dir, focus, new_widget))
+    if (!splitView(&base_style, dir, focus, new_widget))
         freeWidget(new_widget);
 }
 
@@ -169,6 +170,15 @@ int main(int argc, char **argv)
     SetTargetFPS(60);
     InitWindow(720, 500, "SNB");
     
+    base_style = (WidgetStyle) {
+        .scrollbar_thumb_roundness = 0.5,
+        .scrollbar_thumb_segments  = 5,
+        .scrollbar_thumb_width     = 10,
+        .scrollbar_thumb_margin    = 3,
+        .scrollbar_thumb_color     = RED,
+        .scrollbar_track_color     = LIGHTGRAY,
+    };
+
     style = (BufferViewStyle) {
         .line_h   = 1,
         .ruler_x  = 80,
@@ -189,7 +199,7 @@ int main(int argc, char **argv)
     else
         file = NULL;
 
-    Widget *root = createBufferView(&style);
+    Widget *root = createBufferView(&base_style, &style);
     if (root == NULL)
         return -1;
     root->parent = &root;
