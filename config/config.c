@@ -113,7 +113,9 @@ check_literal(int offset, const char *literal, int len)
     if (offset + len > scanner.len)
         return false;
     return !strncmp(scanner.src + offset, literal, len) &&
-           (offset + len == scanner.len || !isalpha(scanner.src[offset + len]));
+           (offset + len == scanner.len || isspace(scanner.src[offset + len]));
+    // The second condition handles (invalid) literals
+    // followed by arbitrary characters
 }
 
 static int
