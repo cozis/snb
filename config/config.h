@@ -28,9 +28,38 @@ typedef struct {
     int size;
 } Cfg;
 
+/**
+ * @brief Initializes a Cfg object
+ *
+ * @param[out] cfg The Cfg object to be initialized
+ * @param[in] entries The array that will contain the parsed entries
+ * @param[in] max_entries The maximum number of entries the array can hold
+ */
 void cfg_init(Cfg *cfg, CfgEntry *entries, int max_entries);
 
+/**
+ * @brief Parses the source data and populates the Cfg object
+ *
+ * @param[in] src The source data
+ * @param[in] src_len Length of the source data
+ * @param[in,out] cfg The Cfg object to be populated
+ * @param[out] err Buffer to store error messages
+ *
+ * @return 0 if parsing is successful, -1 otherwise
+ */
 int cfg_parse(const char *src, int src_len, Cfg *cfg, char *err);
+
+/**
+ * @brief Loads and parses a config file
+ *
+ * @param[in] filename Path of the config file
+ * @param[in,out] cfg The Cfg object to be populated
+ * @param[out] err Buffer to store error messages
+ *
+ * @return 0 if loading and parsing are successful, -1 otherwise
+ *
+ * @see cfg_parse() The underlying function that this function wraps
+ */
 int cfg_load(const char *filename, Cfg *cfg, char *err);
 
 char *cfg_get_str(Cfg cfg, const char *key, char *default_);
