@@ -586,6 +586,25 @@ static void manageKey(BufferView *bufview, int key)
     }
 }
 
+static void changeWindowTitle(BufferView *bufview)
+{
+    const char *file;
+    if (bufview->file[0])
+        file = bufview->file;
+    else
+        file = "(unnamed)";
+
+    char buffer[128];
+    snprintf(buffer, sizeof(buffer), "SnB - %s", file);
+    SetWindowTitle(buffer);
+}
+
+static void changeWindowTitleIfFocused(BufferView *bufview)
+{
+    if (getFocus() == bufview)
+        changeWindowTitle(bufview);
+}
+
 static void openFile(BufferView *bufview, const char *filename)
 {
     assert(filename);
@@ -621,6 +640,8 @@ static void openFile(BufferView *bufview, const char *filename)
     } else {
 
         strcpy(bufview->file, filename);
+        changeWindowTitleIfFocused(bufview);
+
         fprintf(stderr, "Loaded '%s'\n", filename);
 
         // Swap the old gap buffer with the new one
@@ -668,6 +689,7 @@ static void saveFile(BufferView *bufview)
     // target file.
     remove(bufview->file);
     rename(second, bufview->file);
+    changeWindowTitleIfFocused(bufview);
 }
 
 static void handleEvent(Widget *widget, Event event)
@@ -678,6 +700,7 @@ static void handleEvent(Widget *widget, Event event)
     switch (event.type) {
 
         case EVENT_MOUSE_LEFT_DOWN:
+        changeWindowTitle(bufview);
         setFocus(widget);
         manageClick(bufview, event.mouse);
         break;

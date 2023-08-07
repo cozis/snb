@@ -168,7 +168,7 @@ int main(int argc, char **argv)
 {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     SetTargetFPS(60);
-    InitWindow(720, 500, "SNB");
+    InitWindow(720, 500, "SnB");
     
     base_style = (WidgetStyle) {
         .scrollbar_thumb_roundness = 0.5,
