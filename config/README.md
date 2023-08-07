@@ -4,7 +4,7 @@ A parser for a simple configuration file format written in C.
 
 ## Example
 
-```json
+```
 # A sample config file for a generic text editor
 font: "JetBrainsMono Nerd Font"
 font.size: 14
