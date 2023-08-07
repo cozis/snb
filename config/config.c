@@ -84,7 +84,7 @@ skip_whitespace()
 static void
 skip_blank()
 {
-    while (!is_at_end() && isblank(peek()))
+    while (!is_at_end() && isspace(peek()) && peek() != '\n')
         advance();
 }
 
