@@ -137,6 +137,15 @@ static void manageEvents(Widget *root)
         event.mouse.y -= mouse_focus->last_offset.y;
         handleWidgetEvent(mouse_focus, event);
     }
+
+    Vector2 wheel = GetMouseWheelMoveV();
+    if (wheel.x != 0 || wheel.y != 0) {
+        Event event;
+        event.type = EVENT_MOUSE_WHEEL;
+        event.mouse = GetMousePosition();
+        event.wheel = wheel;
+        handleWidgetEvent(root, event);
+    }
     
     int first_repeat_freq = 500000;
     int       repeat_freq =  30000;
@@ -171,14 +180,17 @@ int main(int argc, char **argv)
     InitWindow(720, 500, "SnB");
     
     base_style = (WidgetStyle) {
+        
+        .color_background = (Color) {0x19, 0x1b, 0x27, 0xff},
+
         .scrollbar_thumb_roundness = 0.5,
         .scrollbar_thumb_segments  = 5,
-        .scrollbar_thumb_width     = 15,
+        .scrollbar_thumb_width     = 10,
         .scrollbar_thumb_margin    = 3,
 
-        .scrollbar_track_color        = LIGHTGRAY,
-        .scrollbar_thumb_color        = (Color) {0xd8, 0x6f, 0x00, 0xff},
-        .scrollbar_thumb_active_color = GREEN,
+        .scrollbar_track_color        = (Color) {0x46, 0x49, 0x56, 0xff},
+        .scrollbar_thumb_color        = LIGHTGRAY,
+        .scrollbar_thumb_active_color = (Color) {0x39, 0x82, 0x38, 0xff},
     };
 
     style = (BufferViewStyle) {
@@ -188,7 +200,7 @@ int main(int argc, char **argv)
         .pad_h = 10,
         .pad_v = 10,
         .color_cursor = RED,
-        .color_text   = BLACK,
+        .color_text   = LIGHTGRAY,
         .color_ruler  = GRAY,
         .font_path = "SourceCodePro-Regular.ttf",
         .font_size = 24,

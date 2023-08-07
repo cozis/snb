@@ -329,7 +329,7 @@ static void drawSelection(BufferView *bufview, GapBufferLine line,
         .width  = stringRenderWidth(font, font_size, line.str + select_in_line_start, select_in_line_end - select_in_line_start),
         .height = line_h,
     };
-    DrawRectangleRec(selection_rect, LIGHTGRAY);
+    DrawRectangleRec(selection_rect, (Color) {0x34, 0x37, 0x45, 0xff});
 }
 
 static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area)

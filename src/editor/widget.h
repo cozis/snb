@@ -11,6 +11,7 @@ typedef void    (*WidgetFuncFree)(Widget *widget);
 typedef void    (*WidgetFuncHandleEvent)(Widget *widget, Event event);
 
 typedef struct {
+    Color color_background;
     float scrollbar_thumb_roundness;
     int   scrollbar_thumb_segments;
     float scrollbar_thumb_width;

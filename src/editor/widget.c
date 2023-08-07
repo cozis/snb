@@ -266,10 +266,10 @@ void drawWidget(Widget *widget, Vector2 offset, Vector2 area)
         }
 
         if (widget->target.id == 0)
-            widget->target = LoadRenderTexture(area.x, area.y);
+            widget->target = LoadRenderTexture(ceil(area.x), ceil(area.y));
 
         BeginTextureMode(widget->target);
-        DrawRectangle(0, 0, area.x, area.y, WHITE);
+        DrawRectangle(0, 0, area.x, area.y, widget->style->color_background);
         logic_area = widget->draw(widget, logic_offset, area);
         drawScrollbars(widget);
         EndTextureMode();
@@ -288,7 +288,7 @@ void drawWidget(Widget *widget, Vector2 offset, Vector2 area)
 
     } else {
         
-        DrawRectangle(offset.x, offset.y, area.x, area.y, WHITE);
+        DrawRectangle(offset.x, offset.y, area.x, area.y, widget->style->color_background);
 
         Vector2 logic_offset;
         logic_offset.x = offset.x - widget->scroll.x;
@@ -310,6 +310,17 @@ void handleWidgetEvent(Widget *widget, Event event)
     bool handled = false;
 
     switch (event.type) {
+
+        case EVENT_MOUSE_WHEEL:
+        if (!widget->scrolling) {
+            Vector2 scale = {.x=50, .y=50};
+            Vector2 delta = event.wheel;
+            widget->scroll.x -= scale.x * delta.x;
+            widget->scroll.y -= scale.y * delta.y;
+            widget->scroll.x = clampHorizontalScrollValue(widget, widget->scroll.x);
+            widget->scroll.y = clampVerticalScrollValue(widget, widget->scroll.y);
+        }
+        break;
 
         case EVENT_MOUSE_MOVE:
         if (widget->scrolling) {

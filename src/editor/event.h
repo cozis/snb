@@ -8,6 +8,7 @@ typedef enum {
     EVENT_TEXT,
     EVENT_OPEN,
     EVENT_SAVE,
+    EVENT_MOUSE_WHEEL,
     EVENT_MOUSE_MOVE,
     EVENT_MOUSE_LEFT_UP,
     EVENT_MOUSE_LEFT_DOWN,
@@ -20,6 +21,7 @@ typedef struct {
         int rune;
         int key;
         const char *path;
+        Vector2 wheel;
     };
 } Event;
 
