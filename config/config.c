@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <assert.h>
 #include "config.h"
 
 typedef struct {
@@ -108,7 +108,7 @@ skip_whitespace_and_comments()
 }
 
 static bool
-check_literal(int offset, const char *literal, int len)
+follows_string(int offset, const char *literal, int len)
 {
     if (offset + len > scanner.len)
         return false;
@@ -179,173 +179,297 @@ cfg_init(Cfg *cfg, CfgEntry *entries, int max_entries)
     cfg->size = 0;
 }
 
+static void
+copy_slice_into(int src_off, int src_len, char *dst, int max)
+{
+    assert(src_len < max);
+    memcpy(dst, scanner.src + src_off, src_len);
+    dst[src_len] = '\0';
+}
+
+static int 
+parse_string(CfgEntry *entry, char *err, int count)
+{
+    // Consume opening '"'
+    advance();
+
+    int val_offset = cur();
+    while (!is_at_end() && is_value(peek()))
+        advance();
+
+    if (is_at_end() || peek() != '"')
+        return error("closing '\"' expected in entry %d", err, count + 1);
+
+    int val_len = cur() - val_offset;
+    if (val_len > CFG_MAX_VAL_LEN)
+        return error("value too long in entry %d", err, count + 1);
+
+    // Consume closing '"'
+    advance();
+
+    copy_slice_into(val_offset, val_len, 
+                    entry->val.str, 
+                    sizeof(entry->val.str));
+    entry->type = TYPE_STR;
+    return 0;
+}
+
+static int
+parse_true(CfgEntry *entry, char *err, int count)
+{
+    if (!follows_string(cur(), "true", 4))
+        return error("invalid literal in entry %d", err, count + 1);
+
+    // Consume "true"
+    advance2(4);
+
+    entry->val.bool_ = true;
+    entry->type = TYPE_BOOL;
+    return 0;
+}
+
+static int
+parse_false(CfgEntry *entry, char *err, int count)
+{
+    if (!follows_string(cur(), "false", 5))
+        return error("invalid literal in entry %d", err, count + 1);
+
+    // Consume "false"
+    advance2(5);
+
+    entry->val.bool_ = false;
+    entry->type = TYPE_BOOL;
+    return 0;
+}
+
+static int
+parse_rgba(CfgEntry *entry, char *err, int count)
+{
+    if (!follows_string(cur(), "rgba", 4))
+        return error("invalid literal in entry %d", err, count + 1);
+
+    // Consume "rgba"
+    advance2(4);
+
+    skip_blank();
+    if (is_at_end() || peek() != '(')
+        return error("Missing color quantities after \"rgba\"", err);
+    advance();
+
+    bool is_int;
+    uint8_t rgb[3];
+    for (int i = 0; i < 3; i++) {
+        // Skip whitespace preceding the number
+        skip_blank();
+
+        float number = consume_number(&is_int);
+        if (!is_int || number < 0 || number > 255)
+            return error("invalid number in entry %d", err,
+                         count + 1);
+        rgb[i] = (uint8_t) number;
+
+        // Skip whitespace following the number
+        skip_blank();
+
+        if (is_at_end() || peek() != ',')
+            return error("',' expected in entry %d", err, count + 1);
+
+        // Consume ','
+        advance();
+    }
+
+    // Skip whitespace preceding the alpha
+    skip_blank();
+
+    float alpha = consume_number(&is_int);
+
+    if (alpha < 0 || alpha > 1)
+        return error("invalid number in entry %d", err, count + 1);
+
+    // Skip whitespace following alpha
+    skip_blank();
+
+    if (is_at_end() || peek() != ')')
+        return error("')' expected in entry %d", err, count + 1);
+
+    // Consume ')'
+    advance();
+
+    CfgColor color = {
+        .r = rgb[0],
+        .g = rgb[1],
+        .b = rgb[2],
+        .a = (uint8_t) (alpha * 255),
+    };
+    entry->val.color = color;
+    entry->type = TYPE_COLOR;
+    return 0;
+}
+
+static int 
+parse_literal(CfgEntry *entry, char *err, int count)
+{
+    int code;
+    switch (peek()) {
+        case 't': code = parse_true(entry, err, count);  break;
+        case 'f': code = parse_false(entry, err, count); break;
+        case 'r': code = parse_rgba(entry, err, count);  break;
+        default: return error("invalid literal in entry %d", err, count + 1);
+    }
+    return code;
+}
+
+static void
+parse_number(CfgEntry *entry)
+{
+    bool is_int;
+    float number = consume_number(&is_int);
+
+    if (is_int) {
+        entry->val.int_ = (int) number;
+        entry->type = TYPE_INT;
+    } else {
+        entry->val.float_ = number;
+        entry->type = TYPE_FLOAT;
+    }
+}
+
+static int
+parse_value(CfgEntry *entry, char *err, int count)
+{
+    // Skip blank space between ':' and value
+    skip_blank();
+
+    // Missing value
+    if (is_at_end() || peek() == '\n')
+        return error("missing value in entry %d", err, count + 1);
+    
+    char c = peek();
+
+    int code;
+
+    if (c == '"')
+        code = parse_string(entry, err, count);
+    else if (isalpha(c))
+        code = parse_literal(entry, err, count);
+    else if (isdigit(c) || (c == '-' && isdigit(peek_next()))) {
+        parse_number(entry);
+        code = 0;
+    } else
+        code = error("invalid value in entry %d", err, count + 1);
+
+    return code;
+}
+
+static int
+parse_key(CfgEntry *entry, char *err, int count)
+{
+    // Missing key
+    if (is_at_end() || !is_key(peek()))
+        return error("missing key in entry %d", err, count + 1);
+
+    // Consume key
+    int key_offset = cur();
+    do
+        advance();
+    while (!is_at_end() && is_key(peek()));
+    int key_len = cur() - key_offset;
+
+    if (key_len > CFG_MAX_KEY_LEN)
+        return error("key too long in entry %d", err, count + 1);
+
+    copy_slice_into(key_offset, key_len, entry->key, sizeof(entry->key));
+    return 0;
+}
+
+static int
+consume_key_and_value_separator(char *err, int count)
+{
+    // Skip blank space between the key and ':'
+    skip_blank();
+
+    if (is_at_end() || peek() != ':')
+        return error("':' expected in entry %d", err, count + 1);
+
+    // Consume ':'
+    advance();
+    return 0;
+}
+
+static int
+parse_entry(CfgEntry *entry, char *err, int count)
+{
+    if (parse_key(entry, err, count))
+        return -1;
+
+    if (consume_key_and_value_separator(err, count))
+        return -1;
+
+    // Consume value
+    if (parse_value(entry, err, count) < 0)
+        return -1;
+
+    // Go to the end of the line and consume the \n
+    // (if the file ended that's okay too)
+    skip_blank();
+    if (!is_at_end()) {
+        if (peek() != '\n')
+            return error("unexpected character '%c'", err, peek());
+        advance();
+    }
+
+    return 0;
+}
+
 int
 cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
 {
-    int count = 0;
     init_scanner(src, src_len);
+
+    cfg->size = 0;
 
     // Skip initial whitespace and comments
     skip_whitespace_and_comments();
-
-    while (!is_at_end() && count < cfg->max_entries) {
-        // Missing key
-        if (is_at_end() || !is_key(peek()))
-            return error("missing key in entry %d", err, count + 1);
-
-        // Consume key
-        int key_offset = cur();
-        do
-            advance();
-        while (!is_at_end() && is_key(peek()));
-        int key_len = cur() - key_offset;
-
-        if (key_len > CFG_MAX_KEY_LEN)
-            return error("key too long in entry %d", err, count + 1);
-
-        memcpy(cfg->entries[count].key, src + key_offset, key_len);
-        cfg->entries[count].key[key_len] = '\0';
-
-        // Skip blank space between the key and ':'
-        skip_blank();
-
-        if (is_at_end() || peek() != ':')
-            return error("':' expected in entry %d", err, count + 1);
-
-        // Consume ':'
-        advance();
-
-        // Skip blank space between ':' and value
-        skip_blank();
-
-        // Missing value
-        if (is_at_end() || peek() == '\n')
-            return error("missing value in entry %d", err, count + 1);
-
-        // Consume value
-        char c = peek();
-
-        if (c == '"') {
-            // Consume opening '"'
-            advance();
-
-            int val_offset = cur();
-            while (!is_at_end() && is_value(peek()))
-                advance();
-
-            if (is_at_end() || peek() != '"')
-                return error("closing '\"' expected in entry %d", err, count + 1);
-
-            int val_len = cur() - val_offset;
-            if (val_len > CFG_MAX_VAL_LEN)
-                return error("value too long in entry %d", err, count + 1);
-
-            // Consume closing '"'
-            advance();
-
-            memcpy(cfg->entries[count].val.str, src + val_offset, val_len);
-            cfg->entries[count].val.str[val_len] = '\0';
-            cfg->entries[count].type = TYPE_STR;
-        } else if (isalpha(c)) {
-            switch (c) {
-            case 't':
-                if (!check_literal(cur(), "true", 4))
-                    return error("invalid literal in entry %d", err, count + 1);
-                // Consume "true"
-                advance2(4);
-                cfg->entries[count].val.bool_ = true;
-                cfg->entries[count].type = TYPE_BOOL;
-                break;
-            case 'f':
-                if (!check_literal(cur(), "false", 5))
-                    return error("invalid literal in entry %d", err, count + 1);
-                // Consume "false"
-                advance2(5);
-                cfg->entries[count].val.bool_ = false;
-                cfg->entries[count].type = TYPE_BOOL;
-                break;
-            case 'r':
-                if (check_literal(cur(), "rgba(", 5)) {
-                    // Consume "rgba("
-                    advance2(5);
-
-                    bool is_int;
-                    uint8_t rgb[3];
-                    for (int i = 0; i < 3; i++) {
-                        // Skip whitespace preceding the number
-                        skip_blank();
-
-                        float number = consume_number(&is_int);
-                        if (!is_int || number < 0 || number > 255)
-                            return error("invalid number in entry %d", err,
-                                         count + 1);
-                        rgb[i] = (uint8_t) number;
-
-                        // Skip whitespace following the number
-                        skip_blank();
-
-                        if (is_at_end() || peek() != ',')
-                            return error("',' expected in entry %d", err, count + 1);
-
-                        // Consume ','
-                        advance();
-                    }
-
-                    // Skip whitespace preceding the alpha
-                    skip_blank();
-
-                    float alpha = consume_number(&is_int);
-
-                    if (alpha < 0 || alpha > 1)
-                        return error("invalid number in entry %d", err, count + 1);
-
-                    // Skip whitespace following alpha
-                    skip_blank();
-
-                    if (is_at_end() || peek() != ')')
-                        return error("')' expected in entry %d", err, count + 1);
-
-                    // Consume ')'
-                    advance();
-
-                    CfgColor color = {
-                        .r = rgb[0],
-                        .g = rgb[1],
-                        .b = rgb[2],
-                        .a = (uint8_t) (alpha * 255),
-                    };
-                    cfg->entries[count].val.color = color;
-                    cfg->entries[count].type = TYPE_COLOR;
-                } else {
-                    return error("invalid literal in entry %d", err, count + 1);
-                }
-                break;
-            default:
-                return error("invalid literal in entry %d", err, count + 1);
-            }
-        } else if (isdigit(c) || (c == '-' && isdigit(peek_next()))) {
-            bool is_int;
-            float number = consume_number(&is_int);
-
-            if (is_int) {
-                cfg->entries[count].val.int_ = (int) number;
-                cfg->entries[count].type = TYPE_INT;
-            } else {
-                cfg->entries[count].val.float_ = number;
-                cfg->entries[count].type = TYPE_FLOAT;
-            }
-        } else {
-            return error("invalid value in entry %d", err, count + 1);
-        }
-
-        count++;
-
-        // Skip whitespace and comments for the next entry
+    while (!is_at_end() && cfg->size < cfg->max_entries) {
+        CfgEntry *entry = &cfg->entries[cfg->size];
+        if (parse_entry(entry, err, cfg->size) < 0)
+            return -1;
+        cfg->size++;
         skip_whitespace_and_comments();
     }
-
-    cfg->size = count;
     return 0;
+}
+
+static char*
+load_file_bytes(const char *filename, int *len, char *err)
+{
+    FILE *file = fopen(filename, "rb");
+    if (!file) {
+        error("failed to open the file", err);
+        return NULL;
+    }
+
+    fseek(file, 0, SEEK_END);
+    size_t size = (size_t) ftell(file);
+    rewind(file);
+
+    char *src = malloc(size + 1);
+    if (src == NULL) {
+        error("memory allocation failed", err);
+        return NULL;
+    }
+
+    size_t bytes_read = fread(src, sizeof(char), size, file);
+    fclose(file);
+
+    if (bytes_read != size) {
+        free(src);
+        error("failed to read the file", err);
+        return NULL;
+    }
+
+    *len = size;
+    return src;
 }
 
 int
@@ -355,28 +479,12 @@ cfg_load(const char *filename, Cfg *cfg, char *err)
     if (strcmp(ext, ".cfg") != 0)
         return error("invalid file extension", err);
 
-    FILE *file = fopen(filename, "rb");
-    if (!file)
-        return error("failed to open the file", err);
-
-    fseek(file, 0, SEEK_END);
-    size_t size = ftell(file);
-    rewind(file);
-
-    char *src = malloc(size + 1);
+    int len;
+    char *src = load_file_bytes(filename, &len, err);
     if (src == NULL)
-        return error("memory allocation failed", err);
-
-    size_t bytes_read = fread(src, sizeof(char), size, file);
-    fclose(file);
-
-    if (bytes_read != size) {
-        free(src);
-        return error("failed to read the file", err);
-    }
-
-    src[size] = '\0';
-    int res = cfg_parse(src, strlen(src), cfg, err);
+        return -1;
+    
+    int res = cfg_parse(src, len, cfg, err);
 
     free(src);
     return res;
@@ -423,30 +531,30 @@ cfg_get_color(Cfg cfg, const char *key, CfgColor default_)
 }
 
 void
-cfg_print(Cfg cfg)
+cfg_fprint(FILE *stream, Cfg cfg)
 {
     for (int i = 0; i < cfg.size; i++) {
-        fprintf(stdout, "%s: ", cfg.entries[i].key);
+        fprintf(stream, "%s: ", cfg.entries[i].key);
 
         switch (cfg.entries[i].type) {
         case TYPE_STR:
-            fprintf(stdout, "\"%s\"\n", cfg.entries[i].val.str);
+            fprintf(stream, "\"%s\"\n", cfg.entries[i].val.str);
             break;
         case TYPE_BOOL:
-            fprintf(stdout, "%s\n", cfg.entries[i].val.bool_ ? "true" : "false");
+            fprintf(stream, "%s\n", cfg.entries[i].val.bool_ ? "true" : "false");
             break;
         case TYPE_INT:
-            fprintf(stdout, "%d\n", cfg.entries[i].val.int_);
+            fprintf(stream, "%d\n", cfg.entries[i].val.int_);
             break;
         case TYPE_FLOAT:
-            fprintf(stdout, "%f\n", cfg.entries[i].val.float_);
+            fprintf(stream, "%f\n", cfg.entries[i].val.float_);
             break;
         case TYPE_COLOR:;
             CfgColor c = cfg.entries[i].val.color;
-            fprintf(stdout, "rgba(%d, %d, %d, %d)\n", c.r, c.g, c.b, c.a);
+            fprintf(stream, "rgba(%d, %d, %d, %d)\n", c.r, c.g, c.b, c.a);
             break;
         default:
-            fprintf(stderr, "CfgError: unknown type\n");
+            fprintf(stream, "CfgError: unknown type\n");
         }
     }
 }

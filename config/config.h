@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #define CFG_MAX_KEY_LEN 32
 #define CFG_MAX_VAL_LEN 64
@@ -83,6 +84,6 @@ int cfg_get_int(Cfg cfg, const char *key, int default_);
 float cfg_get_float(Cfg cfg, const char *key, float default_);
 CfgColor cfg_get_color(Cfg cfg, const char *key, CfgColor default_);
 
-void cfg_print(Cfg cfg);
+void cfg_fprint(FILE *stream, Cfg cfg);
 
 #endif
