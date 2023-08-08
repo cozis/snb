@@ -23,7 +23,7 @@ main(int argc, char *argv[])
 
     cfg_init(&cfg, entries, max_entries);
 
-    char err[MAX_ERR_LEN + 1];
+    char err[CFG_MAX_ERR_LEN + 1];
     int res = cfg_load(argv[1], &cfg, err);
 
     if (res != 0) {
@@ -32,13 +32,23 @@ main(int argc, char *argv[])
         return 1;
     }
 
-    cfg_print(cfg);
+    char *font = cfg_get_str(cfg, "font", "Noto Sans Mono");
+    int font_size = cfg_get_int(cfg, "font.size", 12);
+    float zoom = cfg_get_float(cfg, "zoom", 1.0);
+    bool line_num = cfg_get_bool(cfg, "lineNumbers", true);
+    CfgColor bg = cfg_get_color(cfg, "bg.color",
+                                (CfgColor){
+                                    .r = 255,
+                                    .g = 255,
+                                    .b = 255,
+                                    .a = 1,
+                                });
 
-    fprintf(stdout, "Testing out the getters:\n");
-    fprintf(stdout, "%s\n", cfg_get_str(cfg, "font", "err"));
-    fprintf(stdout, "%s\n", cfg_get_bool(cfg, "ruler", false) ? "true" : "false");
-    fprintf(stdout, "%d\n", cfg_get_int(cfg, "fontSize", 30));
-    fprintf(stdout, "%f\n", cfg_get_float(cfg, "x", 5.5));
+    fprintf(stdout, "font: %s\n", font);
+    fprintf(stdout, "font.size: %d\n", font_size);
+    fprintf(stdout, "zoom: %f\n", zoom);
+    fprintf(stdout, "lineNumbers: %s\n", line_num ? "true" : "false");
+    fprintf(stdout, "bg.color: rgba(%d, %d, %d, %d)\n", bg.r, bg.g, bg.b, bg.a);
 
     free(entries);
     return 0;
