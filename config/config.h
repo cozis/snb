@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#define CFG_DETAILED_ERRORS
+
 #define CFG_MAX_KEY_LEN 32
 #define CFG_MAX_VAL_LEN 64
 #define CFG_MAX_ERR_LEN 64
@@ -44,6 +46,19 @@ typedef struct {
     int size;
 } Cfg;
 
+typedef struct {
+    int  off;
+    int  col;
+    int  row;
+    char msg[CFG_MAX_ERR_LEN];
+
+#ifdef CFG_DETAILED_ERRORS
+    bool truncated[3];
+    char lines[3][64];
+#endif
+
+} CfgError;
+
 /**
  * @brief Initializes a Cfg object
  *
@@ -63,7 +78,7 @@ void cfg_init(Cfg *cfg, CfgEntry *entries, int max_entries);
  *
  * @return 0 if parsing is successful, -1 otherwise
  */
-int cfg_parse(const char *src, int src_len, Cfg *cfg, char *err);
+int cfg_parse(const char *src, int src_len, Cfg *cfg, CfgError *err);
 
 /**
  * @brief Loads and parses a config file
@@ -76,7 +91,7 @@ int cfg_parse(const char *src, int src_len, Cfg *cfg, char *err);
  *
  * @see cfg_parse() The underlying "wrapped" function
  */
-int cfg_load(const char *filename, Cfg *cfg, char *err);
+int cfg_load(const char *filename, Cfg *cfg, CfgError *err);
 
 char *cfg_get_str(Cfg cfg, const char *key, char *default_);
 bool cfg_get_bool(Cfg cfg, const char *key, bool default_);
@@ -85,5 +100,6 @@ float cfg_get_float(Cfg cfg, const char *key, float default_);
 CfgColor cfg_get_color(Cfg cfg, const char *key, CfgColor default_);
 
 void cfg_fprint(FILE *stream, Cfg cfg);
+void cfg_fprint_error(FILE *stream, CfgError *err);
 
 #endif

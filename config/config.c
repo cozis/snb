@@ -157,16 +157,122 @@ consume_number(bool *is_int)
     return sign * int_part;
 }
 
-static int
-error(const char *fmt, char *err, ...)
+void cfg_fprint_error(FILE *stream, CfgError *err)
 {
-    const char prefix[] = "CfgError: ";
+    fprintf(stream, "Error at %d:%d :: %s\n", err->row, err->col, err->msg);
+#ifdef CFG_DETAILED_ERRORS
+    fprintf(stream, "\n");
+    if (err->row > 0)
+        fprintf(stream, "%4d | %s %s\n", err->row-1, err->lines[0], err->truncated[0] ? "[...]" : "");
+    fprintf(stream, "%4d | %s %s <------ Error is here!\n", err->row, err->lines[1], err->truncated[1] ? "[...]" : "");
+    fprintf(stream, "%4d | %s %s\n", err->row+1, err->lines[2], err->truncated[2] ? "[...]" : "");
+    fprintf(stream, "\n");
+#endif
+}
+
+static int
+error(const char *fmt, CfgError *err, ...)
+{
+    const char prefix[] = "";// "CfgError: ";
     const int prefix_len = sizeof(prefix) - 1;
+
+    err->off = cur();
+    err->row = 1;
+    err->col = 1;
+    for (int i = 0; i < cur(); i++) {
+        err->col++;
+        if (scanner.src[i] == '\n') {
+            err->row++;
+            err->col = 1;
+        }
+    }
+
+#ifdef CFG_DETAILED_ERRORS
+    {
+        const char *src = scanner.src;
+
+        // Get line offset containing the error's location
+        int line_off = cur();
+
+        while (line_off > 0) {
+            if (src[line_off-1] == '\n')
+                break;
+            line_off--;
+        }
+
+        int line_len = 0;
+        for (int i = line_off; i < scanner.len; i++) {
+            if (src[i] == '\n') {
+                if (i > 0 && src[i-1] == '\r')
+                    line_len--;
+                break;
+            }
+            line_len++;
+        }
+
+        int prev_line_off;
+        int prev_line_len;
+
+        if (line_off == 0) {
+            prev_line_off = 0;
+            prev_line_len = 0;
+        } else {
+            prev_line_off = line_off-1;
+            while (prev_line_off > 0) {
+                if (src[prev_line_off-1] == '\n')
+                    break;
+                prev_line_off--;
+            }
+            prev_line_len = line_off - prev_line_off - 1;
+        }
+
+        int next_line_off;
+        int next_line_len;
+
+        if (line_off + line_len == scanner.len) {
+            next_line_off = 0;
+            next_line_len = 0;
+        } else {
+            next_line_off = line_off + line_len + 1;
+            if (src[next_line_off] == '\n')
+                next_line_off++;
+            next_line_len = 0;
+            while (next_line_off + next_line_len < scanner.len && src[next_line_off + next_line_len] != '\n')
+                next_line_len++;
+        }
+
+        err->truncated[0] = false;
+        err->truncated[1] = false;
+        err->truncated[2] = false;
+
+        if (prev_line_len >= (int) sizeof(err->lines[0])) {
+            prev_line_len = (int) sizeof(err->lines[0])-1;
+            err->truncated[0] = true;
+        }
+
+        if (line_len >= (int) sizeof(err->lines[1])) {
+            line_len = (int) sizeof(err->lines[1])-1;
+            err->truncated[1] = true;
+        }
+
+        if (next_line_len >= (int) sizeof(err->lines[2])) {
+            next_line_len = (int) sizeof(err->lines[2])-1;
+            err->truncated[2] = true;
+        }
+
+        memcpy(err->lines[0], src + prev_line_off, prev_line_len);
+        memcpy(err->lines[1], src +      line_off,      line_len);
+        memcpy(err->lines[2], src + next_line_off, next_line_len);
+        err->lines[0][prev_line_len] = '\0';
+        err->lines[1][line_len] = '\0';
+        err->lines[2][next_line_len] = '\0';
+    }
+#endif
 
     va_list vargs;
     va_start(vargs, err);
-    snprintf(err, CFG_MAX_ERR_LEN + 1, prefix);
-    vsnprintf(err + prefix_len, CFG_MAX_ERR_LEN - prefix_len + 1, fmt, vargs);
+    snprintf(err->msg, CFG_MAX_ERR_LEN + 1, prefix);
+    vsnprintf(err->msg + prefix_len, CFG_MAX_ERR_LEN - prefix_len + 1, fmt, vargs);
     va_end(vargs);
     return -1;
 }
@@ -188,7 +294,7 @@ copy_slice_into(int src_off, int src_len, char *dst, int max)
 }
 
 static int 
-parse_string(CfgEntry *entry, char *err, int count)
+parse_string(CfgEntry *entry, CfgError *err, int count)
 {
     // Consume opening '"'
     advance();
@@ -215,7 +321,7 @@ parse_string(CfgEntry *entry, char *err, int count)
 }
 
 static int
-parse_true(CfgEntry *entry, char *err, int count)
+parse_true(CfgEntry *entry, CfgError *err, int count)
 {
     if (!follows_string(cur(), "true", 4))
         return error("invalid literal in entry %d", err, count + 1);
@@ -229,7 +335,7 @@ parse_true(CfgEntry *entry, char *err, int count)
 }
 
 static int
-parse_false(CfgEntry *entry, char *err, int count)
+parse_false(CfgEntry *entry, CfgError *err, int count)
 {
     if (!follows_string(cur(), "false", 5))
         return error("invalid literal in entry %d", err, count + 1);
@@ -243,7 +349,7 @@ parse_false(CfgEntry *entry, char *err, int count)
 }
 
 static int
-parse_rgba(CfgEntry *entry, char *err, int count)
+parse_rgba(CfgEntry *entry, CfgError *err, int count)
 {
     if (!follows_string(cur(), "rgba", 4))
         return error("invalid literal in entry %d", err, count + 1);
@@ -307,7 +413,7 @@ parse_rgba(CfgEntry *entry, char *err, int count)
 }
 
 static int 
-parse_literal(CfgEntry *entry, char *err, int count)
+parse_literal(CfgEntry *entry, CfgError *err, int count)
 {
     int code;
     switch (peek()) {
@@ -335,7 +441,7 @@ parse_number(CfgEntry *entry)
 }
 
 static int
-parse_value(CfgEntry *entry, char *err, int count)
+parse_value(CfgEntry *entry, CfgError *err, int count)
 {
     // Skip blank space between ':' and value
     skip_blank();
@@ -362,7 +468,7 @@ parse_value(CfgEntry *entry, char *err, int count)
 }
 
 static int
-parse_key(CfgEntry *entry, char *err, int count)
+parse_key(CfgEntry *entry, CfgError *err, int count)
 {
     // Missing key
     if (is_at_end() || !is_key(peek()))
@@ -383,7 +489,7 @@ parse_key(CfgEntry *entry, char *err, int count)
 }
 
 static int
-consume_key_and_value_separator(char *err, int count)
+consume_key_and_value_separator(CfgError *err, int count)
 {
     // Skip blank space between the key and ':'
     skip_blank();
@@ -397,7 +503,7 @@ consume_key_and_value_separator(char *err, int count)
 }
 
 static int
-parse_entry(CfgEntry *entry, char *err, int count)
+parse_entry(CfgEntry *entry, CfgError *err, int count)
 {
     if (parse_key(entry, err, count))
         return -1;
@@ -421,9 +527,19 @@ parse_entry(CfgEntry *entry, char *err, int count)
     return 0;
 }
 
-int
-cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
+static void
+init_error(CfgError *err)
 {
+    err->off = -1;
+    err->col = -1;
+    err->row = -1;
+    err->msg[0] = '\0';
+}
+
+int
+cfg_parse(const char *src, int src_len, Cfg *cfg, CfgError *err)
+{
+    init_error(err);
     init_scanner(src, src_len);
 
     cfg->size = 0;
@@ -441,11 +557,11 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
 }
 
 static char*
-load_file_bytes(const char *filename, int *len, char *err)
+load_file_bytes(const char *filename, int *len, char *msg)
 {
     FILE *file = fopen(filename, "rb");
     if (!file) {
-        error("failed to open the file", err);
+        snprintf(msg, CFG_MAX_ERR_LEN+1, "failed to open the file");
         return NULL;
     }
 
@@ -455,7 +571,7 @@ load_file_bytes(const char *filename, int *len, char *err)
 
     char *src = malloc(size + 1);
     if (src == NULL) {
-        error("memory allocation failed", err);
+        snprintf(msg, CFG_MAX_ERR_LEN+1, "memory allocation failed");
         return NULL;
     }
 
@@ -464,7 +580,7 @@ load_file_bytes(const char *filename, int *len, char *err)
 
     if (bytes_read != size) {
         free(src);
-        error("failed to read the file", err);
+        snprintf(msg, CFG_MAX_ERR_LEN+1, "failed to read the file");
         return NULL;
     }
 
@@ -473,14 +589,20 @@ load_file_bytes(const char *filename, int *len, char *err)
 }
 
 int
-cfg_load(const char *filename, Cfg *cfg, char *err)
+cfg_load(const char *filename, Cfg *cfg, CfgError *err)
 {
-    char *ext = strrchr(filename, '.');
-    if (strcmp(ext, ".cfg") != 0)
-        return error("invalid file extension", err);
+    init_error(err);
 
-    int len;
-    char *src = load_file_bytes(filename, &len, err);
+    char *ext = strrchr(filename, '.');
+    if (strcmp(ext, ".cfg") != 0) {
+        snprintf(err->msg, CFG_MAX_ERR_LEN+1, "invalid file extension");
+        return -1;
+    }
+
+    int   len;
+    char *src;
+
+    src = load_file_bytes(filename, &len, err->msg);
     if (src == NULL)
         return -1;
     

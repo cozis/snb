@@ -23,11 +23,12 @@ main(int argc, char *argv[])
 
     cfg_init(&cfg, entries, max_entries);
 
-    char err[CFG_MAX_ERR_LEN + 1];
-    int res = cfg_load(argv[1], &cfg, err);
+    CfgError err;
+    int res = cfg_load(argv[1], &cfg, &err);
 
     if (res != 0) {
-        fprintf(stderr, "%s\n", err);
+        cfg_fprint_error(stderr, &err);
+        //fprintf(stderr, "Error at %d:%d :: %s\n", err.row, err.col, err.msg);
         free(entries);
         return 1;
     }
