@@ -67,7 +67,7 @@ static Rectangle getVerticalScrollThumbRegion(Widget *widget)
 
     float track_h = area.y - 2 * thumb_margin;
     if (horizontalScrollbarShown(widget))
-        track_h -= thumb_width + thumb_margin;
+        track_h -= thumb_width + 2 * thumb_margin;
 
     Rectangle rect;
 
@@ -94,7 +94,7 @@ static Rectangle getHorizontalScrollThumbRegion(Widget *widget)
 
     float track_w = area.x - 2 * thumb_margin;
     if (verticalScrollbarShown(widget))
-        track_w -= thumb_width + thumb_margin;
+        track_w -= thumb_width + 2 * thumb_margin;
 
     Rectangle rect;
 
@@ -122,7 +122,7 @@ static Rectangle getHorizontalScrollTrackRegion(Widget *widget)
     if (horizontalScrollbarShown(widget)) {
         rect.width = area.x - 2 * thumb_margin;
         if (verticalScrollbarShown(widget))
-            rect.width -= thumb_width + thumb_margin;
+            rect.width -= thumb_width + 2 * thumb_margin;
     } else
         rect.width = 0;
 
@@ -145,7 +145,7 @@ static Rectangle getVerticalScrollTrackRegion(Widget *widget)
     if (verticalScrollbarShown(widget)) {
         rect.height = area.y - 2 * thumb_margin;
         if (horizontalScrollbarShown(widget))
-            rect.height -= thumb_width + thumb_margin;
+            rect.height -= thumb_width + 2 * thumb_margin;
     } else
         rect.height = 0;
 
@@ -216,12 +216,13 @@ float clampHorizontalScrollValue(Widget *widget, float value)
 
 static void drawScrollbars(Widget *widget)
 {
-    float   roundness = widget->style->scrollbar_thumb_roundness;
-    int      segments = widget->style->scrollbar_thumb_segments;
-    Color track_color = widget->style->scrollbar_track_color;
-    Color thumb_color = widget->style->scrollbar_thumb_color;
-    Color active_color = widget->style->scrollbar_thumb_active_color;
-
+    float       roundness = widget->style->scrollbar_thumb_roundness;
+    int          segments = widget->style->scrollbar_thumb_segments;
+    Color     track_color = widget->style->scrollbar_track_color;
+    Color     thumb_color = widget->style->scrollbar_thumb_color;
+    Color    active_color = widget->style->scrollbar_thumb_active_color;
+    Color scrollbar_color = widget->style->scrollbar_color;
+    
     Color v_thumb_color;
     Color h_thumb_color;
     if (widget->scrolling) {
@@ -240,13 +241,25 @@ static void drawScrollbars(Widget *widget)
         v_thumb_color = thumb_color;
     }
 
-    //DrawRectangleRec(getVerticalScrollbarRegion(widget), GRAY);
+    Rectangle v_region = getVerticalScrollbarRegion(widget);
+    Rectangle h_region = getHorizontalScrollbarRegion(widget);
+
+    DrawRectangleRec(v_region, scrollbar_color);
     DrawRectangleRounded(getVerticalScrollTrackRegion(widget), roundness, segments, track_color);
     DrawRectangleRounded(getVerticalScrollThumbRegion(widget), roundness, segments, v_thumb_color);
 
-    //DrawRectangleRec(getHorizontalScrollbarRegion(widget), GRAY);
+    DrawRectangleRec(h_region, scrollbar_color);
     DrawRectangleRounded(getHorizontalScrollTrackRegion(widget), roundness, segments, track_color);
     DrawRectangleRounded(getHorizontalScrollThumbRegion(widget), roundness, segments, h_thumb_color);
+
+    if (horizontalScrollbarShown(widget) && verticalScrollbarShown(widget)) {
+        Rectangle box;
+        box.x = h_region.x + h_region.width;
+        box.y = v_region.y + v_region.height;
+        box.width  = v_region.width;
+        box.height = h_region.height;
+        DrawRectangleRec(box, scrollbar_color);
+    }
 }
 
 void drawWidget(Widget *widget, Vector2 offset, Vector2 area)

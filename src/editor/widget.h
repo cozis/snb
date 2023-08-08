@@ -16,6 +16,7 @@ typedef struct {
     int   scrollbar_thumb_segments;
     float scrollbar_thumb_width;
     float scrollbar_thumb_margin;
+    Color scrollbar_color;
     Color scrollbar_track_color;
     Color scrollbar_thumb_color;
     Color scrollbar_thumb_active_color;
