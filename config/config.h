@@ -2,23 +2,38 @@
 #define CONFIG_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #define MAX_KEY_LEN 32
 #define MAX_VAL_LEN 64
 #define MAX_ERR_LEN 64
 
-typedef enum { TYPE_STR, TYPE_BOOL, TYPE_INT, TYPE_FLOAT } CfgValType;
+typedef struct {
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+    float a;
+} CfgColor;
+
+typedef enum {
+    TYPE_STR,
+    TYPE_BOOL,
+    TYPE_INT,
+    TYPE_FLOAT,
+    TYPE_COLOR,
+} CfgValType;
 
 typedef union {
     char str[MAX_VAL_LEN + 1];
     bool bool_;
     int int_;
     float float_;
+    CfgColor color;
 } CfgVal;
 
 typedef struct {
-    char key[MAX_KEY_LEN + 1];
     CfgValType type;
+    char key[MAX_KEY_LEN + 1];
     CfgVal val;
 } CfgEntry;
 
@@ -66,6 +81,7 @@ char *cfg_get_str(Cfg cfg, const char *key, char *default_);
 bool cfg_get_bool(Cfg cfg, const char *key, bool default_);
 int cfg_get_int(Cfg cfg, const char *key, int default_);
 float cfg_get_float(Cfg cfg, const char *key, float default_);
+CfgColor cfg_get_color(Cfg cfg, const char *key, CfgColor default_);
 
 void cfg_print(Cfg cfg);
 

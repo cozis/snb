@@ -121,25 +121,40 @@ check_literal(int offset, const char *literal, int len)
     // followed by (invalid) arbitrary characters
 }
 
-static int
-consume_rgb_field()
+static float
+consume_number(bool *is_int)
 {
-    // Skip whitespace preceding the number
-    skip_blank();
+    bool is_float = false;
+    int sign = 1;
+    int int_part = 0;
+    float fract_part = 0;
 
-    int num = 0;
+    if (peek() == '-' && isdigit(peek_next())) {
+        advance();
+        sign = -1;
+    }
+
     while (!is_at_end() && isdigit(peek()))
-        num = num * 10 + (advance() - '0');
+        int_part = int_part * 10 + (advance() - '0');
 
-    // Skip whitespace following the number
-    skip_blank();
+    if (!is_at_end() && peek() == '.') {
+        advance();
+        is_float = true;
+    }
 
-    if (!is_at_end() && peek() != ',')
-        return -1;
+    if (is_float) {
+        int div = 1;
+        while (!is_at_end() && isdigit(peek())) {
+            fract_part = fract_part * 10 + (advance() - '0');
+            div *= 10;
+        }
+        float float_ = int_part + (fract_part / div);
+        is_int = false;
+        return sign * float_;
+    }
 
-    // Consume ','
-    advance();
-    return num;
+    *is_int = true;
+    return sign * int_part;
 }
 
 static int
@@ -254,65 +269,39 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
                     // Consume "rgba("
                     advance2(5);
 
-                    // This will become a function (3 - RGB | 4 - RGBA)
-                    // I can call it for R,G,B
-                    // for (int i = 0; i < 3; i++) {
-                    //     skip_blank();
-                    //     int int_ = 0;
-                    //     while (!is_at_end() && isdigit(peek()))
-                    //         int_ = int_ * 10 + (advance() - '0');
-
-                    //     printf("%d\n", int_);
-                    //     skip_blank();
-                    //     if (!is_at_end() && peek() != ',')
-                    //         return error("',' expected in entry %d", err, count +
-                    //         1);
-
-                    //     // Consume ','
-                    //     advance();
-                    // }
-
-                    int rgb[3];
+                    bool is_int;
+                    uint8_t rgb[3];
                     for (int i = 0; i < 3; i++) {
-                        rgb[i] = consume_rgb_field();
-                        if (rgb[i] < 0)
-                            return error("',' expected in entry %d", err, count + 1);
-                        if (rgb[i] > 255)
-                            return error("value out of range in entry %d", err,
+                        // Skip whitespace preceding the number
+                        skip_blank();
+
+                        float number = consume_number(&is_int);
+                        if (!is_int || number < 0 || number > 255)
+                            return error("invalid number in entry %d", err,
                                          count + 1);
-                    }
+                        rgb[i] = (uint8_t) number;
 
-                    skip_blank();
+                        // Skip whitespace following the number
+                        skip_blank();
 
-                    bool is_float = false;
-                    int int_part = 0;
-                    float fract_part = 0;
-                    float alpha;
+                        if (!is_at_end() && peek() != ',')
+                            return error("',' expected in entry %d", err, count + 1);
 
-                    while (!is_at_end() && isdigit(peek()))
-                        int_part = int_part * 10 + (advance() - '0');
-
-                    if (!is_at_end() && peek() == '.') {
+                        // Consume ','
                         advance();
-                        is_float = true;
                     }
 
-                    if (is_float) {
-                        int div = 1;
-                        while (!is_at_end() && isdigit(peek())) {
-                            fract_part = fract_part * 10 + (advance() - '0');
-                            div *= 10;
-                        }
-                        alpha = int_part + (fract_part / div);
-                    } else {
-                        alpha = int_part;
-                    }
-
-                    if (alpha > 1)
-                        return error("value out of range in entry %d", err,
-                                     count + 1);
-
+                    // Skip whitespace preceding the alpha
                     skip_blank();
+
+                    float alpha = consume_number(&is_int);
+
+                    if (alpha < 0 || alpha > 1)
+                        return error("invalid number in entry %d", err, count + 1);
+
+                    // Skip whitespace following alpha
+                    skip_blank();
+
                     if (!is_at_end() && peek() != ')')
                         return error("')' expected in entry %d", err, count + 1);
 
@@ -320,7 +309,11 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
                     advance();
 
                     CfgColor color = {
-                        .r = rgb[0], .g = rgb[1], .b = rgb[2], .a = alpha};
+                        .r = rgb[0],
+                        .g = rgb[1],
+                        .b = rgb[2],
+                        .a = alpha,
+                    };
                     cfg->entries[count].val.color = color;
                     cfg->entries[count].type = TYPE_COLOR;
                 } else if (check_literal(cur(), "rgb(", 4)) {
@@ -332,36 +325,15 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
                 return error("invalid literal in entry %d", err, count + 1);
             }
         } else if (isdigit(c) || (c == '-' && isdigit(peek_next()))) {
-            bool is_float = false;
-            int sign = 1;
-            int int_part = 0;
-            float fract_part = 0;
+            bool is_int;
+            float number = consume_number(&is_int);
 
-            if (c == '-' && isdigit(peek_next())) {
-                advance();
-                sign = -1;
-            }
-
-            while (!is_at_end() && isdigit(peek()))
-                int_part = int_part * 10 + (advance() - '0');
-
-            if (!is_at_end() && peek() == '.') {
-                advance();
-                is_float = true;
-            }
-
-            if (is_float) {
-                int div = 1;
-                while (!is_at_end() && isdigit(peek())) {
-                    fract_part = fract_part * 10 + (advance() - '0');
-                    div *= 10;
-                }
-                float float_ = int_part + (fract_part / div);
-                cfg->entries[count].val.float_ = sign * float_;
-                cfg->entries[count].type = TYPE_FLOAT;
-            } else {
-                cfg->entries[count].val.int_ = sign * int_part;
+            if (is_int) {
+                cfg->entries[count].val.int_ = (int) number;
                 cfg->entries[count].type = TYPE_INT;
+            } else {
+                cfg->entries[count].val.float_ = number;
+                cfg->entries[count].type = TYPE_FLOAT;
             }
         } else {
             return error("invalid value in entry %d", err, count + 1);
