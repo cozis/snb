@@ -312,11 +312,10 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
                         .r = rgb[0],
                         .g = rgb[1],
                         .b = rgb[2],
-                        .a = alpha,
+                        .a = (uint8_t) (alpha * 255),
                     };
                     cfg->entries[count].val.color = color;
                     cfg->entries[count].type = TYPE_COLOR;
-                } else if (check_literal(cur(), "rgb(", 4)) {
                 } else {
                     return error("invalid literal in entry %d", err, count + 1);
                 }
@@ -444,7 +443,7 @@ cfg_print(Cfg cfg)
             break;
         case TYPE_COLOR:;
             CfgColor c = cfg.entries[i].val.color;
-            fprintf(stdout, "rgba(%d, %d, %d, %f)\n", c.r, c.g, c.b, c.a);
+            fprintf(stdout, "rgba(%d, %d, %d, %d)\n", c.r, c.g, c.b, c.a);
             break;
         default:
             fprintf(stderr, "CfgError: unknown type\n");
