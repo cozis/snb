@@ -129,7 +129,7 @@ consume_number(bool *is_int)
     int int_part = 0;
     float fract_part = 0;
 
-    if (peek() == '-' && isdigit(peek_next())) {
+    if (!is_at_end() && peek() == '-' && isdigit(peek_next())) {
         advance();
         sign = -1;
     }
@@ -284,7 +284,7 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
                         // Skip whitespace following the number
                         skip_blank();
 
-                        if (!is_at_end() && peek() != ',')
+                        if (is_at_end() || peek() != ',')
                             return error("',' expected in entry %d", err, count + 1);
 
                         // Consume ','
@@ -302,7 +302,7 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
                     // Skip whitespace following alpha
                     skip_blank();
 
-                    if (!is_at_end() && peek() != ')')
+                    if (is_at_end() || peek() != ')')
                         return error("')' expected in entry %d", err, count + 1);
 
                     // Consume ')'
