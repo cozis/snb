@@ -165,8 +165,8 @@ error(const char *fmt, char *err, ...)
 
     va_list vargs;
     va_start(vargs, err);
-    snprintf(err, MAX_ERR_LEN + 1, prefix);
-    vsnprintf(err + prefix_len, MAX_ERR_LEN - prefix_len + 1, fmt, vargs);
+    snprintf(err, CFG_MAX_ERR_LEN + 1, prefix);
+    vsnprintf(err + prefix_len, CFG_MAX_ERR_LEN - prefix_len + 1, fmt, vargs);
     va_end(vargs);
     return -1;
 }
@@ -200,7 +200,7 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
         while (!is_at_end() && is_key(peek()));
         int key_len = cur() - key_offset;
 
-        if (key_len > MAX_KEY_LEN)
+        if (key_len > CFG_MAX_KEY_LEN)
             return error("key too long in entry %d", err, count + 1);
 
         memcpy(cfg->entries[count].key, src + key_offset, key_len);
@@ -237,7 +237,7 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
                 return error("closing '\"' expected in entry %d", err, count + 1);
 
             int val_len = cur() - val_offset;
-            if (val_len > MAX_VAL_LEN)
+            if (val_len > CFG_MAX_VAL_LEN)
                 return error("value too long in entry %d", err, count + 1);
 
             // Consume closing '"'

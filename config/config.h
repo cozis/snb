@@ -4,9 +4,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define MAX_KEY_LEN 32
-#define MAX_VAL_LEN 64
-#define MAX_ERR_LEN 64
+#define CFG_MAX_KEY_LEN 32
+#define CFG_MAX_VAL_LEN 64
+#define CFG_MAX_ERR_LEN 64
 
 typedef struct {
     uint8_t r;
@@ -24,7 +24,7 @@ typedef enum {
 } CfgValType;
 
 typedef union {
-    char str[MAX_VAL_LEN + 1];
+    char str[CFG_MAX_VAL_LEN + 1];
     bool bool_;
     int int_;
     float float_;
@@ -33,7 +33,7 @@ typedef union {
 
 typedef struct {
     CfgValType type;
-    char key[MAX_KEY_LEN + 1];
+    char key[CFG_MAX_KEY_LEN + 1];
     CfgVal val;
 } CfgEntry;
 
@@ -73,7 +73,7 @@ int cfg_parse(const char *src, int src_len, Cfg *cfg, char *err);
  *
  * @return 0 if loading and parsing are successful, -1 otherwise
  *
- * @see cfg_parse() The underlying function that this function wraps
+ * @see cfg_parse() The underlying "wrapped" function
  */
 int cfg_load(const char *filename, Cfg *cfg, char *err);
 
