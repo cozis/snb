@@ -88,7 +88,7 @@ skip_blank()
         advance();
 }
 
-void
+static void
 skip_comment()
 {
     while (!is_at_end() && peek() == '#') {
@@ -112,10 +112,34 @@ check_literal(int offset, const char *literal, int len)
 {
     if (offset + len > scanner.len)
         return false;
-    return !strncmp(scanner.src + offset, literal, len) &&
-           (offset + len == scanner.len || isspace(scanner.src[offset + len]));
-    // The second condition handles (invalid) literals
-    // followed by arbitrary characters
+    return !strncmp(scanner.src + offset, literal, len);
+    //  && (offset + len == scanner.len || isspace(scanner.src[offset + len]));
+
+    // NOT WORKING for `rgb(255, 255, 255)` because offset + len is indeed a space...
+
+    // The second condition handles literals
+    // followed by (invalid) arbitrary characters
+}
+
+static int
+consume_rgb_field()
+{
+    // Skip whitespace preceding the number
+    skip_blank();
+
+    int num = 0;
+    while (!is_at_end() && isdigit(peek()))
+        num = num * 10 + (advance() - '0');
+
+    // Skip whitespace following the number
+    skip_blank();
+
+    if (!is_at_end() && peek() != ',')
+        return -1;
+
+    // Consume ','
+    advance();
+    return num;
 }
 
 static int
@@ -208,27 +232,105 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
             cfg->entries[count].val.str[val_len] = '\0';
             cfg->entries[count].type = TYPE_STR;
         } else if (isalpha(c)) {
-            bool bool_;
             switch (c) {
             case 't':
                 if (!check_literal(cur(), "true", 4))
                     return error("invalid literal in entry %d", err, count + 1);
                 // Consume "true"
                 advance2(4);
-                bool_ = true;
+                cfg->entries[count].val.bool_ = true;
+                cfg->entries[count].type = TYPE_BOOL;
                 break;
             case 'f':
                 if (!check_literal(cur(), "false", 5))
                     return error("invalid literal in entry %d", err, count + 1);
                 // Consume "false"
                 advance2(5);
-                bool_ = false;
+                cfg->entries[count].val.bool_ = false;
+                cfg->entries[count].type = TYPE_BOOL;
+                break;
+            case 'r':
+                if (check_literal(cur(), "rgba(", 5)) {
+                    // Consume "rgba("
+                    advance2(5);
+
+                    // This will become a function (3 - RGB | 4 - RGBA)
+                    // I can call it for R,G,B
+                    // for (int i = 0; i < 3; i++) {
+                    //     skip_blank();
+                    //     int int_ = 0;
+                    //     while (!is_at_end() && isdigit(peek()))
+                    //         int_ = int_ * 10 + (advance() - '0');
+
+                    //     printf("%d\n", int_);
+                    //     skip_blank();
+                    //     if (!is_at_end() && peek() != ',')
+                    //         return error("',' expected in entry %d", err, count +
+                    //         1);
+
+                    //     // Consume ','
+                    //     advance();
+                    // }
+
+                    int rgb[3];
+                    for (int i = 0; i < 3; i++) {
+                        rgb[i] = consume_rgb_field();
+                        if (rgb[i] < 0)
+                            return error("',' expected in entry %d", err, count + 1);
+                        if (rgb[i] > 255)
+                            return error("value out of range in entry %d", err,
+                                         count + 1);
+                    }
+
+                    skip_blank();
+
+                    bool is_float = false;
+                    int int_part = 0;
+                    float fract_part = 0;
+                    float alpha;
+
+                    while (!is_at_end() && isdigit(peek()))
+                        int_part = int_part * 10 + (advance() - '0');
+
+                    if (!is_at_end() && peek() == '.') {
+                        advance();
+                        is_float = true;
+                    }
+
+                    if (is_float) {
+                        int div = 1;
+                        while (!is_at_end() && isdigit(peek())) {
+                            fract_part = fract_part * 10 + (advance() - '0');
+                            div *= 10;
+                        }
+                        alpha = int_part + (fract_part / div);
+                    } else {
+                        alpha = int_part;
+                    }
+
+                    if (alpha > 1)
+                        return error("value out of range in entry %d", err,
+                                     count + 1);
+
+                    skip_blank();
+                    if (!is_at_end() && peek() != ')')
+                        return error("')' expected in entry %d", err, count + 1);
+
+                    // Consume ')'
+                    advance();
+
+                    CfgColor color = {
+                        .r = rgb[0], .g = rgb[1], .b = rgb[2], .a = alpha};
+                    cfg->entries[count].val.color = color;
+                    cfg->entries[count].type = TYPE_COLOR;
+                } else if (check_literal(cur(), "rgb(", 4)) {
+                } else {
+                    return error("invalid literal in entry %d", err, count + 1);
+                }
                 break;
             default:
                 return error("invalid literal in entry %d", err, count + 1);
             }
-            cfg->entries[count].val.bool_ = bool_;
-            cfg->entries[count].type = TYPE_BOOL;
         } else if (isdigit(c) || (c == '-' && isdigit(peek_next()))) {
             bool is_float = false;
             int sign = 1;
@@ -240,7 +342,7 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, char *err)
                 sign = -1;
             }
 
-            while (!is_at_end() && isdigit(peek()))  // DO-WHILE?
+            while (!is_at_end() && isdigit(peek()))
                 int_part = int_part * 10 + (advance() - '0');
 
             if (!is_at_end() && peek() == '.') {
@@ -343,6 +445,12 @@ cfg_get_float(Cfg cfg, const char *key, float default_)
     return *(float *) get_val(cfg, key, &default_, TYPE_FLOAT);
 }
 
+CfgColor
+cfg_get_color(Cfg cfg, const char *key, CfgColor default_)
+{
+    return *(CfgColor *) get_val(cfg, key, &default_, TYPE_COLOR);
+}
+
 void
 cfg_print(Cfg cfg)
 {
@@ -361,6 +469,10 @@ cfg_print(Cfg cfg)
             break;
         case TYPE_FLOAT:
             fprintf(stdout, "%f\n", cfg.entries[i].val.float_);
+            break;
+        case TYPE_COLOR:;
+            CfgColor c = cfg.entries[i].val.color;
+            fprintf(stdout, "rgba(%d, %d, %d, %f)\n", c.r, c.g, c.b, c.a);
             break;
         default:
             fprintf(stderr, "CfgError: unknown type\n");
