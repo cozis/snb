@@ -7,9 +7,9 @@
 
 #define CFG_DETAILED_ERRORS
 
-#define CFG_MAX_KEY_LEN 32
-#define CFG_MAX_VAL_LEN 64
-#define CFG_MAX_ERR_LEN 64
+#define CFG_MAX_KEY 32
+#define CFG_MAX_VAL 64
+#define CFG_MAX_ERR 64
 
 typedef struct {
     uint8_t r;
@@ -27,7 +27,7 @@ typedef enum {
 } CfgValType;
 
 typedef union {
-    char str[CFG_MAX_VAL_LEN + 1];
+    char str[CFG_MAX_VAL + 1];
     bool bool_;
     int int_;
     float float_;
@@ -36,7 +36,7 @@ typedef union {
 
 typedef struct {
     CfgValType type;
-    char key[CFG_MAX_KEY_LEN + 1];
+    char key[CFG_MAX_KEY + 1];
     CfgVal val;
 } CfgEntry;
 
@@ -50,7 +50,7 @@ typedef struct {
     int off;
     int col;
     int row;
-    char msg[CFG_MAX_ERR_LEN];
+    char msg[CFG_MAX_ERR];
 
 #ifdef CFG_DETAILED_ERRORS
     bool truncated[3];

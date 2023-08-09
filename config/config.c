@@ -276,8 +276,8 @@ error(const char *fmt, CfgError *err, ...)
 
     va_list vargs;
     va_start(vargs, err);
-    snprintf(err->msg, CFG_MAX_ERR_LEN + 1, prefix);
-    vsnprintf(err->msg + prefix_len, CFG_MAX_ERR_LEN - prefix_len + 1, fmt, vargs);
+    snprintf(err->msg, CFG_MAX_ERR + 1, prefix);
+    vsnprintf(err->msg + prefix_len, CFG_MAX_ERR - prefix_len + 1, fmt, vargs);
     va_end(vargs);
     return -1;
 }
@@ -312,7 +312,7 @@ parse_string(CfgEntry *entry, CfgError *err, int count)
         return error("closing '\"' expected in entry %d", err, count + 1);
 
     int val_len = cur() - val_offset;
-    if (val_len > CFG_MAX_VAL_LEN)
+    if (val_len > CFG_MAX_VAL)
         return error("value too long in entry %d", err, count + 1);
 
     // Consume closing '"'
@@ -490,7 +490,7 @@ parse_key(CfgEntry *entry, CfgError *err, int count)
     while (!is_at_end() && is_key(peek()));
     int key_len = cur() - key_offset;
 
-    if (key_len > CFG_MAX_KEY_LEN)
+    if (key_len > CFG_MAX_KEY)
         return error("key too long in entry %d", err, count + 1);
 
     copy_slice_into(key_offset, key_len, entry->key, sizeof(entry->key));
@@ -570,7 +570,7 @@ load_file_bytes(const char *filename, int *len, char *msg)
 {
     FILE *file = fopen(filename, "rb");
     if (!file) {
-        snprintf(msg, CFG_MAX_ERR_LEN + 1, "failed to open the file");
+        snprintf(msg, CFG_MAX_ERR + 1, "failed to open the file");
         return NULL;
     }
 
@@ -580,7 +580,7 @@ load_file_bytes(const char *filename, int *len, char *msg)
 
     char *src = malloc(size + 1);
     if (src == NULL) {
-        snprintf(msg, CFG_MAX_ERR_LEN + 1, "memory allocation failed");
+        snprintf(msg, CFG_MAX_ERR + 1, "memory allocation failed");
         return NULL;
     }
 
@@ -589,7 +589,7 @@ load_file_bytes(const char *filename, int *len, char *msg)
 
     if (bytes_read != size) {
         free(src);
-        snprintf(msg, CFG_MAX_ERR_LEN + 1, "failed to read the file");
+        snprintf(msg, CFG_MAX_ERR + 1, "failed to read the file");
         return NULL;
     }
 
@@ -604,7 +604,7 @@ cfg_load(const char *filename, Cfg *cfg, CfgError *err)
 
     char *ext = strrchr(filename, '.');
     if (strcmp(ext, ".cfg") != 0) {
-        snprintf(err->msg, CFG_MAX_ERR_LEN + 1, "invalid file extension");
+        snprintf(err->msg, CFG_MAX_ERR + 1, "invalid file extension");
         return -1;
     }
 
