@@ -27,6 +27,10 @@ else
     endif
 endif
 
+# Auxiliary functions
+rwildcard = $(foreach d, $(wildcard $(1:=/*)), $(call rwildcard ,$d, $2) $(filter $(subst *, %, $2), $d))
+uppercase = $(shell echo '$1' | tr '[:lower:]' '[:upper:]')
+
 CC = gcc
 
 # release, debug
@@ -44,7 +48,6 @@ else
 endif
 
 EXE_EDITOR = snb
-EXE_DIALOG = snb-dialog
 
 ifeq ($(OSNAME),windows)
 	RAYLIB_DIR = 3p/raylib-4.5.0_win64_mingw-w64
@@ -60,7 +63,7 @@ RAYLIB_LIB = $(RAYLIB_DIR)/lib
 INCDIRS = $(RAYLIB_INC)
 LIBDIRS = $(RAYLIB_LIB)
 
-CFLAGS_ALWAYS  = -Wall -Wextra
+CFLAGS_ALWAYS  = -Wall -Wextra -Wpedantic
 CFLAGS_DEBUG   = -g
 CFLAGS_LINUX   =
 CFLAGS_WINDOWS =
@@ -70,18 +73,12 @@ LFLAGS_DEBUG   = -g
 LFLAGS_LINUX   = -lm -lpthread -ldl
 LFLAGS_WINDOWS = -lopengl32 -lgdi32 -lwinmm -lcomdlg32 -lws2_32
 
-# Auxiliary functions
-rwildcard = $(foreach d, $(wildcard $(1:=/*)), $(call rwildcard ,$d, $2) $(filter $(subst *, %, $2), $d))
-uppercase = $(shell echo '$1' | tr '[:lower:]' '[:upper:]')
-
-EDITOR_CFILES = $(call rwildcard, $(SRCDIR)/editor, *.c)
-DIALOG_CFILES = $(call rwildcard, $(SRCDIR)/dialog, *.c)
-
-EDITOR_OFILES = $(patsubst $(SRCDIR)/editor/%.c, $(OBJDIR)/editor/%.o, $(EDITOR_CFILES))
-DIALOG_OFILES = $(patsubst $(SRCDIR)/dialog/%.c, $(OBJDIR)/dialog/%.o, $(DIALOG_CFILES))
+CFILES = $(call rwildcard, $(SRCDIR) $(SRCDIR)/widget $(SRCDIR)/utils, *.c)
+OFILES = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(CFILES))
 
 CFLAGS = $(CFLAGS_CUSTOM) $(CFLAGS_ALWAYS) $(patsubst %, -I%, $(INCDIRS))
 LFLAGS = $(LFLAGS_CUSTOM) $(LFLAGS_ALWAYS) $(patsubst %, -L%, $(LIBDIRS))
+
 ifeq ($(BUILD),debug)
 	CFLAGS += $(CFLAGS_DEBUG)
 	LFLAGS += $(LFLAGS_DEBUG)
@@ -93,20 +90,17 @@ else ifeq ($(OSNAME),linux)
 	CFLAGS += $(CFLAGS_LINUX)
 	LFLAGS += $(LFLAGS_LINUX)
 else
-	$(error Unknown OS. Was expected windows)
+	$(error Unknown OS. Was expected Windows or Linux)
 endif
 
-all: $(EXE_EDITOR) $(EXE_DIALOG)
+all: $(EXE_EDITOR)
 
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	@ mkdir -p $(@D)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-$(EXE_EDITOR): $(EDITOR_OFILES)
+$(EXE_EDITOR): $(OFILES)
 	$(CC) -o $@ $^ $(LFLAGS)
 
-$(EXE_DIALOG): $(DIALOG_OFILES)
-	$(CC) -o $@ $(DIALOG_OFILES) $(LFLAGS)
-
 clean:
-	rm -fr cache snb snb.exe snb-dialog snb-dialog.exe
+	rm -fr cache snb snb.exe

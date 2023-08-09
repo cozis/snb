@@ -629,6 +629,31 @@ void GapBuffer_moveRelativeVertically(GapBuffer *buff, bool up)
         moveBytesBeforeGap(buff, cur - (buff->gap_offset + buff->gap_length));
 }
 
+void GapBuffer_copyDataOut(GapBuffer *gap, char *dst, size_t max)
+{
+    String before = getStringBeforeGap(gap);
+    String  after =  getStringAfterGap(gap);
+
+    size_t copied;
+    if (before.size > max) {
+        memcpy(dst, before.data, max);
+        copied = max;
+    } else {
+        memcpy(dst, before.data, before.size);
+        copied = before.size;
+        if (copied + after.size < max) {
+            memcpy(dst + copied, after.data, after.size);
+            copied += after.size;
+        } else {
+            memcpy(dst + copied, after.data, max - copied);
+            copied = max;
+        }
+    }
+    if (copied == max)
+        copied -= 1;
+    dst[copied] = '\0';
+}
+
 void GapBufferIter_init(GapBufferIter *iter, GapBuffer *buff)
 {
     iter->crossed_gap = false;

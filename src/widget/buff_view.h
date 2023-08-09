@@ -1,6 +1,6 @@
 #include <raylib.h>
 #include "widget.h"
-#include "gap_buffer.h"
+#include "../utils/gap_buffer.h"
 
 typedef struct {
     float line_h;
@@ -29,4 +29,4 @@ typedef struct {
     char file[1024];
 } BufferView;
 
-Widget *createBufferView(WidgetStyle *base_style, BufferViewStyle *style);
+BufferView *createBufferView(WidgetStyle *base_style, BufferViewStyle *style);

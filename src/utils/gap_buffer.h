@@ -1,3 +1,6 @@
+#ifndef GAP_BUFFER_H
+#define GAP_BUFFER_H
+
 #include <stddef.h>
 #include <stdbool.h>
 
@@ -20,6 +23,7 @@ GapBuffer *GapBuffer_createUsingMemory(void *mem, size_t len, void (*free)(void*
 GapBuffer *GapBuffer_cloneUsingMemory(void *mem, size_t len, void (*free)(void*), const GapBuffer *src);
 void       GapBuffer_whipeClean(GapBuffer *gap);
 void       GapBuffer_destroy(GapBuffer *buff);
+void       GapBuffer_copyDataOut(GapBuffer *gap, char *dst, size_t max);
 bool       GapBuffer_insertString(GapBuffer *buff, const char *str, size_t len);
 bool       GapBuffer_insertRune(GapBuffer *buff, unsigned int code);
 void       GapBuffer_moveRelativeVertically(GapBuffer *buff, bool up);
@@ -45,4 +49,6 @@ bool       GapBuffer_insertStringMaybeRelocate(GapBuffer **buff, const char *str
 #ifndef GAPBUFFER_NOIO
 bool GapBuffer_insertFile(GapBuffer *gap, const char *file);
 bool GapBuffer_saveTo(GapBuffer *gap, const char *file);
+#endif
+
 #endif
