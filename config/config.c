@@ -116,9 +116,8 @@ follows_string(int offset, const char *literal, int len)
     return !strncmp(scanner.src + offset, literal, len);
 }
 
-// FIXME
-static float
-consume_number(bool *is_int)
+static int
+consume_number(float *number, bool *is_int)
 {
     bool is_float = false;
     int sign = 1;
@@ -126,9 +125,13 @@ consume_number(bool *is_int)
     float fract_part = 0;
 
     if (!is_at_end() && peek() == '-' && isdigit(peek_next())) {
+        // Consume '-'
         advance();
         sign = -1;
     }
+
+    if (!is_at_end() && !isdigit(peek()))
+        return -1;
 
     while (!is_at_end() && isdigit(peek()))
         int_part = int_part * 10 + (advance() - '0');
@@ -138,19 +141,21 @@ consume_number(bool *is_int)
         is_float = true;
     }
 
-    if (is_float) {
+    if (!is_float) {
+        *is_int = true;
+        *number = sign * int_part;
+    } else {
         int div = 1;
         while (!is_at_end() && isdigit(peek())) {
             fract_part = fract_part * 10 + (advance() - '0');
             div *= 10;
         }
         float float_ = int_part + (fract_part / div);
-        is_int = false;
-        return sign * float_;
+        *is_int = false;
+        *number = sign * float_;
     }
 
-    *is_int = true;
-    return sign * int_part;
+    return 0;
 }
 
 static void
@@ -372,9 +377,14 @@ parse_rgba(CfgEntry *entry, CfgError *err)
         // Skip whitespace preceding the number
         skip_blank();
 
-        float number = consume_number(&is_int);
+        float number;
+        if (consume_number(&number, &is_int) != 0)
+            return error(err, "number expected");
+
         if (!is_int || number < 0 || number > 255)
-            return error(err, "invalid number");
+            return error(err, "red, blue and green must be "
+                              "integers in range (0, 255)");
+
         rgb[i] = (uint8_t) number;
 
         // Skip whitespace following the number
@@ -390,10 +400,12 @@ parse_rgba(CfgEntry *entry, CfgError *err)
     // Skip whitespace preceding the alpha
     skip_blank();
 
-    float alpha = consume_number(&is_int);
+    float alpha;
+    if (consume_number(&alpha, &is_int) != 0)
+        return error(err, "number expected");
 
     if (alpha < 0 || alpha > 1)
-        return error(err, "invalid number");
+        return error(err, "alpha must be in range (0, 1)");
 
     // Skip whitespace following alpha
     skip_blank();
@@ -435,11 +447,15 @@ parse_literal(CfgEntry *entry, CfgError *err)
     return code;
 }
 
-static void
-parse_number(CfgEntry *entry)
+// CONSUME NUM HERE
+
+static int
+parse_number(CfgEntry *entry, CfgError *err)
 {
     bool is_int;
-    float number = consume_number(&is_int);
+    float number;
+    if (consume_number(&number, &is_int) != 0)
+        return error(err, "number expected");
 
     if (is_int) {
         entry->val.int_ = (int) number;
@@ -448,32 +464,30 @@ parse_number(CfgEntry *entry)
         entry->val.float_ = number;
         entry->type = TYPE_FLOAT;
     }
+
+    return 0;
 }
 
 static int
 parse_value(CfgEntry *entry, CfgError *err)
 {
-    // Skip blank space between ':' and value
+    // Skip blank space between ':' and the value
     skip_blank();
 
     if (is_at_end() || peek() == '\n')
         return error(err, "missing value");
 
+    // Consume value
     char c = peek();
 
-    int code;
-
     if (c == '"')
-        code = parse_string(entry, err);
+        return parse_string(entry, err);
     else if (isalpha(c))
-        code = parse_literal(entry, err);
-    else if (isdigit(c) || (c == '-' && isdigit(peek_next()))) {
-        parse_number(entry);
-        code = 0;
-    } else
-        code = error(err, "invalid value");
-
-    return code;
+        return parse_literal(entry, err);
+    else if (isdigit(c) || (c == '-' && isdigit(peek_next())))
+        return parse_number(entry, err);
+    else
+        return error(err, "invalid value");
 }
 
 static int
