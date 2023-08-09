@@ -5,11 +5,24 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define CFG_DETAILED_ERRORS
+// #define CFG_DETAILED_ERRORS
 
 #define CFG_MAX_KEY 32
 #define CFG_MAX_VAL 64
 #define CFG_MAX_ERR 64
+
+typedef struct {
+    int off;
+    int col;
+    int row;
+    char msg[CFG_MAX_ERR + 1];
+
+#ifdef CFG_DETAILED_ERRORS
+    bool truncated[3];
+    char lines[3][64];
+#endif
+
+} CfgError;
 
 typedef struct {
     uint8_t r;
@@ -45,19 +58,6 @@ typedef struct {
     int max_entries;
     int size;
 } Cfg;
-
-typedef struct {
-    int off;
-    int col;
-    int row;
-    char msg[CFG_MAX_ERR];
-
-#ifdef CFG_DETAILED_ERRORS
-    bool truncated[3];
-    char lines[3][64];
-#endif
-
-} CfgError;
 
 /**
  * @brief Initializes a Cfg object
