@@ -66,7 +66,7 @@ main(void)
 
 ## Data types
 
--   **String**: A string is enclosed within double quotes (`"`) and can contain alphabetic characters, punctuation, digits, and blanks (spaces or tabs)
+-   **String**: A string is enclosed within double quotes (`"`) and can contain alphabetic characters, punctuation, digits, and blanks (spaces or tabs). Double quotes are not allowed inside a string.
 
 -   **Boolean**: A boolean is either `true` or `false`
 
@@ -76,7 +76,7 @@ main(void)
 
 -   **Color**: A color is defined in the `rgba(R, G, B, A)` format, where `R`, `G`, and `B` are integers between 0 and 255, and `A` is a floating-point number between 0 and 1
 
-## EBNF Grammar
+## EBNF grammar
 
 ```
 cfg   ::= line*

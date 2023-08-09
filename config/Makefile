@@ -6,8 +6,8 @@ CFLAGS=-Wall -Wextra -Wpedantic -g
 
 all: config
 
-config: main.c config.c
-	$(CC) $^ -o $@ $(CFLAGS)
+config: main.c config.c config.h
+	$(CC) main.c config.c -o $@ $(CFLAGS)
 
 fuzz: fuzz.c config.c
 	clang -O1 -g -fsanitize=fuzzer,address,undefined $^ -o $@
