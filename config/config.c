@@ -295,7 +295,7 @@ copy_slice_into(int src_off, int src_len, char *dst, int max)
 }
 
 static int
-parse_string(CfgEntry *entry, CfgError *err, int count)
+parse_string(CfgEntry *entry, CfgError *err)
 {
     // Consume opening '"'
     advance();
@@ -305,11 +305,11 @@ parse_string(CfgEntry *entry, CfgError *err, int count)
         advance();
 
     if (is_at_end() || peek() != '"')
-        return error(err, "closing '\"' expected in entry %d", count + 1);
+        return error(err, "closing '\"' expected");
 
     int val_len = cur() - val_offset;
     if (val_len > CFG_MAX_VAL)
-        return error(err, "value too long in entry %d", count + 1);
+        return error(err, "value too long");
 
     // Consume closing '"'
     advance();
@@ -320,10 +320,10 @@ parse_string(CfgEntry *entry, CfgError *err, int count)
 }
 
 static int
-parse_true(CfgEntry *entry, CfgError *err, int count)
+parse_true(CfgEntry *entry, CfgError *err)
 {
     if (!follows_string(cur(), "true", 4))
-        return error(err, "invalid literal in entry %d", count + 1);
+        return error(err, "invalid literal");
 
     // Consume "true"
     advance2(4);
@@ -334,10 +334,10 @@ parse_true(CfgEntry *entry, CfgError *err, int count)
 }
 
 static int
-parse_false(CfgEntry *entry, CfgError *err, int count)
+parse_false(CfgEntry *entry, CfgError *err)
 {
     if (!follows_string(cur(), "false", 5))
-        return error(err, "invalid literal in entry %d", count + 1);
+        return error(err, "invalid literal");
 
     // Consume "false"
     advance2(5);
@@ -348,10 +348,10 @@ parse_false(CfgEntry *entry, CfgError *err, int count)
 }
 
 static int
-parse_rgba(CfgEntry *entry, CfgError *err, int count)
+parse_rgba(CfgEntry *entry, CfgError *err)
 {
     if (!follows_string(cur(), "rgba", 4))
-        return error(err, "invalid literal in entry %d", count + 1);
+        return error(err, "invalid literal");
 
     // Consume "rgba"
     advance2(4);
@@ -373,14 +373,14 @@ parse_rgba(CfgEntry *entry, CfgError *err, int count)
 
         float number = consume_number(&is_int);
         if (!is_int || number < 0 || number > 255)
-            return error(err, "invalid number in entry %d", count + 1);
+            return error(err, "invalid number");
         rgb[i] = (uint8_t) number;
 
         // Skip whitespace following the number
         skip_blank();
 
         if (is_at_end() || peek() != ',')
-            return error(err, "',' expected in entry %d", count + 1);
+            return error(err, "',' expected");
 
         // Consume ','
         advance();
@@ -392,13 +392,13 @@ parse_rgba(CfgEntry *entry, CfgError *err, int count)
     float alpha = consume_number(&is_int);
 
     if (alpha < 0 || alpha > 1)
-        return error(err, "invalid number in entry %d", count + 1);
+        return error(err, "invalid number");
 
     // Skip whitespace following alpha
     skip_blank();
 
     if (is_at_end() || peek() != ')')
-        return error(err, "')' expected in entry %d", count + 1);
+        return error(err, "')' expected");
 
     // Consume ')'
     advance();
@@ -415,21 +415,21 @@ parse_rgba(CfgEntry *entry, CfgError *err, int count)
 }
 
 static int
-parse_literal(CfgEntry *entry, CfgError *err, int count)
+parse_literal(CfgEntry *entry, CfgError *err)
 {
     int code;
     switch (peek()) {
     case 't':
-        code = parse_true(entry, err, count);
+        code = parse_true(entry, err);
         break;
     case 'f':
-        code = parse_false(entry, err, count);
+        code = parse_false(entry, err);
         break;
     case 'r':
-        code = parse_rgba(entry, err, count);
+        code = parse_rgba(entry, err);
         break;
     default:
-        return error(err, "invalid literal in entry %d", count + 1);
+        return error(err, "invalid literal");
     }
     return code;
 }
@@ -450,38 +450,38 @@ parse_number(CfgEntry *entry)
 }
 
 static int
-parse_value(CfgEntry *entry, CfgError *err, int count)
+parse_value(CfgEntry *entry, CfgError *err)
 {
     // Skip blank space between ':' and value
     skip_blank();
 
     // Missing value
     if (is_at_end() || peek() == '\n')
-        return error(err, "missing value in entry %d", count + 1);
+        return error(err, "missing value");
 
     char c = peek();
 
     int code;
 
     if (c == '"')
-        code = parse_string(entry, err, count);
+        code = parse_string(entry, err);
     else if (isalpha(c))
-        code = parse_literal(entry, err, count);
+        code = parse_literal(entry, err);
     else if (isdigit(c) || (c == '-' && isdigit(peek_next()))) {
         parse_number(entry);
         code = 0;
     } else
-        code = error(err, "invalid value in entry %d", count + 1);
+        code = error(err, "invalid value");
 
     return code;
 }
 
 static int
-parse_key(CfgEntry *entry, CfgError *err, int count)
+parse_key(CfgEntry *entry, CfgError *err)
 {
     // Missing key
     if (is_at_end() || !is_key(peek()))
-        return error(err, "missing key in entry %d", count + 1);
+        return error(err, "missing key");
 
     // Consume key
     int key_offset = cur();
@@ -491,20 +491,20 @@ parse_key(CfgEntry *entry, CfgError *err, int count)
     int key_len = cur() - key_offset;
 
     if (key_len > CFG_MAX_KEY)
-        return error(err, "key too long in entry %d", count + 1);
+        return error(err, "key too long");
 
     copy_slice_into(key_offset, key_len, entry->key, sizeof(entry->key));
     return 0;
 }
 
 static int
-consume_key_and_value_separator(CfgError *err, int count)
+consume_key_and_value_separator(CfgError *err)
 {
     // Skip blank space between the key and ':'
     skip_blank();
 
     if (is_at_end() || peek() != ':')
-        return error(err, "':' expected in entry %d", count + 1);
+        return error(err, "':' expected");
 
     // Consume ':'
     advance();
@@ -512,16 +512,16 @@ consume_key_and_value_separator(CfgError *err, int count)
 }
 
 static int
-parse_entry(CfgEntry *entry, CfgError *err, int count)
+parse_entry(CfgEntry *entry, CfgError *err)
 {
-    if (parse_key(entry, err, count))
+    if (parse_key(entry, err))
         return -1;
 
-    if (consume_key_and_value_separator(err, count))
+    if (consume_key_and_value_separator(err))
         return -1;
 
     // Consume value
-    if (parse_value(entry, err, count) < 0)
+    if (parse_value(entry, err) < 0)
         return -1;
 
     // Go to the end of the line and consume the \n
@@ -557,7 +557,7 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, CfgError *err)
     skip_whitespace_and_comments();
     while (!is_at_end() && cfg->size < cfg->max_entries) {
         CfgEntry *entry = &cfg->entries[cfg->size];
-        if (parse_entry(entry, err, cfg->size) < 0)
+        if (parse_entry(entry, err) < 0)
             return -1;
         cfg->size++;
         skip_whitespace_and_comments();
