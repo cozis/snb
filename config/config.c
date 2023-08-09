@@ -522,17 +522,17 @@ parse_entry(CfgEntry *entry, CfgError *err)
     if (parse_value(entry, err) != 0)
         return -1;
 
-    // Go to the end of the line and consume the \n
-    // (if the file ended that's okay too)
+    // Skip trailing whitespace after the value
     skip_blank();
 
-    // FIXME (inline comment)
-    if (!is_at_end()) {
-        if (peek() != '\n')
-            return error(err, "unexpected character '%c'", peek());
-        advance();
-    }
+    if (!is_at_end() && peek() == '#')
+        skip_comment();
 
+    if (!is_at_end() && peek() != '\n')
+        return error(err, "unexpected character '%c'", peek());
+
+    // Consume '\n'
+    advance();
     return 0;
 }
 
