@@ -1,10 +1,10 @@
+#include "config.h"
+#include <assert.h>
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
-#include "config.h"
 
 typedef struct {
     const char *src;
@@ -157,15 +157,19 @@ consume_number(bool *is_int)
     return sign * int_part;
 }
 
-void cfg_fprint_error(FILE *stream, CfgError *err)
+void
+cfg_fprint_error(FILE *stream, CfgError *err)
 {
     fprintf(stream, "Error at %d:%d :: %s\n", err->row, err->col, err->msg);
 #ifdef CFG_DETAILED_ERRORS
     fprintf(stream, "\n");
     if (err->row > 0)
-        fprintf(stream, "%4d | %s %s\n", err->row-1, err->lines[0], err->truncated[0] ? "[...]" : "");
-    fprintf(stream, "%4d | %s %s <------ Error is here!\n", err->row, err->lines[1], err->truncated[1] ? "[...]" : "");
-    fprintf(stream, "%4d | %s %s\n", err->row+1, err->lines[2], err->truncated[2] ? "[...]" : "");
+        fprintf(stream, "%4d | %s %s\n", err->row - 1, err->lines[0],
+                err->truncated[0] ? "[...]" : "");
+    fprintf(stream, "%4d | %s %s <------ Error is here!\n", err->row, err->lines[1],
+            err->truncated[1] ? "[...]" : "");
+    fprintf(stream, "%4d | %s %s\n", err->row + 1, err->lines[2],
+            err->truncated[2] ? "[...]" : "");
     fprintf(stream, "\n");
 #endif
 }
@@ -173,7 +177,7 @@ void cfg_fprint_error(FILE *stream, CfgError *err)
 static int
 error(const char *fmt, CfgError *err, ...)
 {
-    const char prefix[] = "";// "CfgError: ";
+    const char prefix[] = "";  // "CfgError: ";
     const int prefix_len = sizeof(prefix) - 1;
 
     err->off = cur();
@@ -195,7 +199,7 @@ error(const char *fmt, CfgError *err, ...)
         int line_off = cur();
 
         while (line_off > 0) {
-            if (src[line_off-1] == '\n')
+            if (src[line_off - 1] == '\n')
                 break;
             line_off--;
         }
@@ -203,7 +207,7 @@ error(const char *fmt, CfgError *err, ...)
         int line_len = 0;
         for (int i = line_off; i < scanner.len; i++) {
             if (src[i] == '\n') {
-                if (i > 0 && src[i-1] == '\r')
+                if (i > 0 && src[i - 1] == '\r')
                     line_len--;
                 break;
             }
@@ -217,9 +221,9 @@ error(const char *fmt, CfgError *err, ...)
             prev_line_off = 0;
             prev_line_len = 0;
         } else {
-            prev_line_off = line_off-1;
+            prev_line_off = line_off - 1;
             while (prev_line_off > 0) {
-                if (src[prev_line_off-1] == '\n')
+                if (src[prev_line_off - 1] == '\n')
                     break;
                 prev_line_off--;
             }
@@ -237,7 +241,8 @@ error(const char *fmt, CfgError *err, ...)
             if (src[next_line_off] == '\n')
                 next_line_off++;
             next_line_len = 0;
-            while (next_line_off + next_line_len < scanner.len && src[next_line_off + next_line_len] != '\n')
+            while (next_line_off + next_line_len < scanner.len &&
+                   src[next_line_off + next_line_len] != '\n')
                 next_line_len++;
         }
 
@@ -246,22 +251,22 @@ error(const char *fmt, CfgError *err, ...)
         err->truncated[2] = false;
 
         if (prev_line_len >= (int) sizeof(err->lines[0])) {
-            prev_line_len = (int) sizeof(err->lines[0])-1;
+            prev_line_len = (int) sizeof(err->lines[0]) - 1;
             err->truncated[0] = true;
         }
 
         if (line_len >= (int) sizeof(err->lines[1])) {
-            line_len = (int) sizeof(err->lines[1])-1;
+            line_len = (int) sizeof(err->lines[1]) - 1;
             err->truncated[1] = true;
         }
 
         if (next_line_len >= (int) sizeof(err->lines[2])) {
-            next_line_len = (int) sizeof(err->lines[2])-1;
+            next_line_len = (int) sizeof(err->lines[2]) - 1;
             err->truncated[2] = true;
         }
 
         memcpy(err->lines[0], src + prev_line_off, prev_line_len);
-        memcpy(err->lines[1], src +      line_off,      line_len);
+        memcpy(err->lines[1], src + line_off, line_len);
         memcpy(err->lines[2], src + next_line_off, next_line_len);
         err->lines[0][prev_line_len] = '\0';
         err->lines[1][line_len] = '\0';
@@ -293,7 +298,7 @@ copy_slice_into(int src_off, int src_len, char *dst, int max)
     dst[src_len] = '\0';
 }
 
-static int 
+static int
 parse_string(CfgEntry *entry, CfgError *err, int count)
 {
     // Consume opening '"'
@@ -313,9 +318,7 @@ parse_string(CfgEntry *entry, CfgError *err, int count)
     // Consume closing '"'
     advance();
 
-    copy_slice_into(val_offset, val_len, 
-                    entry->val.str, 
-                    sizeof(entry->val.str));
+    copy_slice_into(val_offset, val_len, entry->val.str, sizeof(entry->val.str));
     entry->type = TYPE_STR;
     return 0;
 }
@@ -370,8 +373,7 @@ parse_rgba(CfgEntry *entry, CfgError *err, int count)
 
         float number = consume_number(&is_int);
         if (!is_int || number < 0 || number > 255)
-            return error("invalid number in entry %d", err,
-                         count + 1);
+            return error("invalid number in entry %d", err, count + 1);
         rgb[i] = (uint8_t) number;
 
         // Skip whitespace following the number
@@ -412,15 +414,22 @@ parse_rgba(CfgEntry *entry, CfgError *err, int count)
     return 0;
 }
 
-static int 
+static int
 parse_literal(CfgEntry *entry, CfgError *err, int count)
 {
     int code;
     switch (peek()) {
-        case 't': code = parse_true(entry, err, count);  break;
-        case 'f': code = parse_false(entry, err, count); break;
-        case 'r': code = parse_rgba(entry, err, count);  break;
-        default: return error("invalid literal in entry %d", err, count + 1);
+    case 't':
+        code = parse_true(entry, err, count);
+        break;
+    case 'f':
+        code = parse_false(entry, err, count);
+        break;
+    case 'r':
+        code = parse_rgba(entry, err, count);
+        break;
+    default:
+        return error("invalid literal in entry %d", err, count + 1);
     }
     return code;
 }
@@ -449,7 +458,7 @@ parse_value(CfgEntry *entry, CfgError *err, int count)
     // Missing value
     if (is_at_end() || peek() == '\n')
         return error("missing value in entry %d", err, count + 1);
-    
+
     char c = peek();
 
     int code;
@@ -556,12 +565,12 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, CfgError *err)
     return 0;
 }
 
-static char*
+static char *
 load_file_bytes(const char *filename, int *len, char *msg)
 {
     FILE *file = fopen(filename, "rb");
     if (!file) {
-        snprintf(msg, CFG_MAX_ERR_LEN+1, "failed to open the file");
+        snprintf(msg, CFG_MAX_ERR_LEN + 1, "failed to open the file");
         return NULL;
     }
 
@@ -571,7 +580,7 @@ load_file_bytes(const char *filename, int *len, char *msg)
 
     char *src = malloc(size + 1);
     if (src == NULL) {
-        snprintf(msg, CFG_MAX_ERR_LEN+1, "memory allocation failed");
+        snprintf(msg, CFG_MAX_ERR_LEN + 1, "memory allocation failed");
         return NULL;
     }
 
@@ -580,7 +589,7 @@ load_file_bytes(const char *filename, int *len, char *msg)
 
     if (bytes_read != size) {
         free(src);
-        snprintf(msg, CFG_MAX_ERR_LEN+1, "failed to read the file");
+        snprintf(msg, CFG_MAX_ERR_LEN + 1, "failed to read the file");
         return NULL;
     }
 
@@ -595,17 +604,17 @@ cfg_load(const char *filename, Cfg *cfg, CfgError *err)
 
     char *ext = strrchr(filename, '.');
     if (strcmp(ext, ".cfg") != 0) {
-        snprintf(err->msg, CFG_MAX_ERR_LEN+1, "invalid file extension");
+        snprintf(err->msg, CFG_MAX_ERR_LEN + 1, "invalid file extension");
         return -1;
     }
 
-    int   len;
+    int len;
     char *src;
 
     src = load_file_bytes(filename, &len, err->msg);
     if (src == NULL)
         return -1;
-    
+
     int res = cfg_parse(src, len, cfg, err);
 
     free(src);

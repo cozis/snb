@@ -47,9 +47,9 @@ typedef struct {
 } Cfg;
 
 typedef struct {
-    int  off;
-    int  col;
-    int  row;
+    int off;
+    int col;
+    int row;
     char msg[CFG_MAX_ERR_LEN];
 
 #ifdef CFG_DETAILED_ERRORS
