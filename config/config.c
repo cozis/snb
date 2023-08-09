@@ -153,21 +153,13 @@ consume_number(bool *is_int)
     return sign * int_part;
 }
 
-void
-cfg_fprint_error(FILE *stream, CfgError *err)
+static void
+init_error(CfgError *err)
 {
-    fprintf(stream, "Error at %d:%d :: %s\n", err->row, err->col, err->msg);
-#ifdef CFG_DETAILED_ERRORS
-    fprintf(stream, "\n");
-    if (err->row > 0)
-        fprintf(stream, "%4d | %s %s\n", err->row - 1, err->lines[0],
-                err->truncated[0] ? "[...]" : "");
-    fprintf(stream, "%4d | %s %s <------ Error is here!\n", err->row, err->lines[1],
-            err->truncated[1] ? "[...]" : "");
-    fprintf(stream, "%4d | %s %s\n", err->row + 1, err->lines[2],
-            err->truncated[2] ? "[...]" : "");
-    fprintf(stream, "\n");
-#endif
+    err->off = -1;
+    err->col = -1;
+    err->row = -1;
+    err->msg[0] = '\0';
 }
 
 static int
@@ -279,11 +271,20 @@ error(CfgError *err, const char *fmt, ...)
 }
 
 void
-cfg_init(Cfg *cfg, CfgEntry *entries, int max_entries)
+cfg_fprint_error(FILE *stream, CfgError *err)
 {
-    cfg->entries = entries;
-    cfg->max_entries = max_entries;
-    cfg->size = 0;
+    fprintf(stream, "Error at %d:%d :: %s\n", err->row, err->col, err->msg);
+#ifdef CFG_DETAILED_ERRORS
+    fprintf(stream, "\n");
+    if (err->row > 0)
+        fprintf(stream, "%4d | %s %s\n", err->row - 1, err->lines[0],
+                err->truncated[0] ? "[...]" : "");
+    fprintf(stream, "%4d | %s %s <------ Error is here!\n", err->row, err->lines[1],
+            err->truncated[1] ? "[...]" : "");
+    fprintf(stream, "%4d | %s %s\n", err->row + 1, err->lines[2],
+            err->truncated[2] ? "[...]" : "");
+    fprintf(stream, "\n");
+#endif
 }
 
 static void
@@ -455,7 +456,6 @@ parse_value(CfgEntry *entry, CfgError *err)
     // Skip blank space between ':' and value
     skip_blank();
 
-    // Missing value
     if (is_at_end() || peek() == '\n')
         return error(err, "missing value");
 
@@ -479,7 +479,6 @@ parse_value(CfgEntry *entry, CfgError *err)
 static int
 parse_key(CfgEntry *entry, CfgError *err)
 {
-    // Missing key
     if (is_at_end() || !is_key(peek()))
         return error(err, "missing key");
 
@@ -498,7 +497,7 @@ parse_key(CfgEntry *entry, CfgError *err)
 }
 
 static int
-consume_key_and_value_separator(CfgError *err)
+consume_column(CfgError *err)
 {
     // Skip blank space between the key and ':'
     skip_blank();
@@ -514,19 +513,20 @@ consume_key_and_value_separator(CfgError *err)
 static int
 parse_entry(CfgEntry *entry, CfgError *err)
 {
-    if (parse_key(entry, err))
+    if (parse_key(entry, err) != 0)
         return -1;
 
-    if (consume_key_and_value_separator(err))
+    if (consume_column(err) != 0)
         return -1;
 
-    // Consume value
-    if (parse_value(entry, err) < 0)
+    if (parse_value(entry, err) != 0)
         return -1;
 
     // Go to the end of the line and consume the \n
     // (if the file ended that's okay too)
     skip_blank();
+
+    // FIXME (inline comment)
     if (!is_at_end()) {
         if (peek() != '\n')
             return error(err, "unexpected character '%c'", peek());
@@ -536,13 +536,12 @@ parse_entry(CfgEntry *entry, CfgError *err)
     return 0;
 }
 
-static void
-init_error(CfgError *err)
+void
+cfg_init(Cfg *cfg, CfgEntry *entries, int max_entries)
 {
-    err->off = -1;
-    err->col = -1;
-    err->row = -1;
-    err->msg[0] = '\0';
+    cfg->entries = entries;
+    cfg->max_entries = max_entries;
+    cfg->size = 0;
 }
 
 int
@@ -553,12 +552,14 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, CfgError *err)
 
     cfg->size = 0;
 
-    // Skip initial whitespace and comments
     skip_whitespace_and_comments();
+
     while (!is_at_end() && cfg->size < cfg->max_entries) {
         CfgEntry *entry = &cfg->entries[cfg->size];
-        if (parse_entry(entry, err) < 0)
+
+        if (parse_entry(entry, err) != 0)
             return -1;
+
         cfg->size++;
         skip_whitespace_and_comments();
     }
@@ -566,34 +567,34 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, CfgError *err)
 }
 
 static char *
-load_file_bytes(const char *filename, int *len, char *msg)
+read_file(const char *filename, int *size, char *err)
 {
     FILE *file = fopen(filename, "rb");
     if (!file) {
-        snprintf(msg, CFG_MAX_ERR + 1, "failed to open the file");
+        snprintf(err, CFG_MAX_ERR + 1, "failed to open the file");
         return NULL;
     }
 
     fseek(file, 0, SEEK_END);
-    size_t size = (size_t) ftell(file);
+    size_t size_ = (size_t) ftell(file);
     rewind(file);
 
-    char *src = malloc(size + 1);
+    char *src = malloc(size_ + 1);
     if (src == NULL) {
-        snprintf(msg, CFG_MAX_ERR + 1, "memory allocation failed");
+        snprintf(err, CFG_MAX_ERR + 1, "memory allocation failed");
         return NULL;
     }
 
-    size_t bytes_read = fread(src, sizeof(char), size, file);
+    size_t bytes_read = fread(src, sizeof(char), size_, file);
     fclose(file);
 
-    if (bytes_read != size) {
+    if (bytes_read != size_) {
         free(src);
-        snprintf(msg, CFG_MAX_ERR + 1, "failed to read the file");
+        snprintf(err, CFG_MAX_ERR + 1, "failed to read the file");
         return NULL;
     }
 
-    *len = size;
+    *size = size_;
     return src;
 }
 
@@ -608,14 +609,12 @@ cfg_load(const char *filename, Cfg *cfg, CfgError *err)
         return -1;
     }
 
-    int len;
-    char *src;
-
-    src = load_file_bytes(filename, &len, err->msg);
+    int src_len;
+    char *src = read_file(filename, &src_len, err->msg);
     if (src == NULL)
         return -1;
 
-    int res = cfg_parse(src, len, cfg, err);
+    int res = cfg_parse(src, src_len, cfg, err);
 
     free(src);
     return res;
