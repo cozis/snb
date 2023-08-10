@@ -227,7 +227,7 @@ BufferView *createBufferView(WidgetStyle *base_style, BufferViewStyle *style)
 
     initWidget(&bufview->base, base_style, draw, free_, handleEvent);
     bufview->style = style;
-    bufview->loaded_font_path = NULL;
+    bufview->loaded_font_file = NULL;
     bufview->loaded_font_size = 14;
     bufview->loaded_font = GetFontDefault();
     bufview->selecting = false;
@@ -249,27 +249,27 @@ static void free_(Widget *widget)
 
 static void reloadFont(BufferView *bufview)
 {
-    const char *font_path = bufview->style->font_path;
+    const char *font_file = bufview->style->font_file;
     float       font_size = bufview->style->font_size;
 
     Font font;
-    if (bufview->style->font_path)
-        font = LoadFontEx(font_path, font_size, NULL, 250);
+    if (bufview->style->font_file)
+        font = LoadFontEx(font_file, font_size, NULL, 250);
     else
         font = GetFontDefault();
 
     UnloadFont(bufview->loaded_font); // FIXME: Is it okay to unload the default font?
     bufview->loaded_font = font;
-    bufview->loaded_font_path = font_path;
+    bufview->loaded_font_file = font_file;
     bufview->loaded_font_size = font_size;
 }
 
 static void reloadStyleIfChanged(BufferView *bufview)
 {
     if (bufview->style) {
-        bool changed_font_path = (bufview->style->font_path != bufview->loaded_font_path);
+        bool changed_font_file = (bufview->style->font_file != bufview->loaded_font_file);
         bool changed_font_size = (bufview->style->font_size != bufview->loaded_font_size);
-        if (changed_font_path || changed_font_size)
+        if (changed_font_file || changed_font_size)
             reloadFont(bufview);
     }
 }

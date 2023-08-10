@@ -7,6 +7,7 @@
 
 void initStyle(void);
 void freeStyle(void);
+void loadStyleFrom(const char *file);
 void increaseFontSize(void);
 void decreaseFontSize(void);
 TextInput  *createStylizedTextInput(void);

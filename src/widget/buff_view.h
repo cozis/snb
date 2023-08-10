@@ -12,14 +12,14 @@ typedef struct {
     Color color_cursor;
     Color color_text;
     Color color_ruler;
-    const char *font_path;
+    const char *font_file;
     float       font_size;
 } BufferViewStyle;
 
 typedef struct {
     Widget base;
     BufferViewStyle *style;
-    const char *loaded_font_path;
+    const char *loaded_font_file;
     float       loaded_font_size;
     Font        loaded_font;
     bool        selecting;

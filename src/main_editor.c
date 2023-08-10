@@ -17,6 +17,7 @@ int editor(int argc, char **argv)
     SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     SetTargetFPS(60);
     InitWindow(720, 500, "SnB");
+    loadStyleFrom("style.cfg");
 
     Widget *root = (Widget*) createStylizedBufferView();
     root->parent = &root;
