@@ -1,5 +1,8 @@
 snb
 snb.exe
+
+.clang-format
+
 snb-dialog
 snb-dialog.exe
 
