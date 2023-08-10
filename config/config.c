@@ -25,7 +25,7 @@ init_scanner(const char *src, int src_len)
 static bool
 is_key(char ch)
 {
-    return isalpha(ch) || ch == '.';
+    return isalpha(ch) || ch == '.' || ch == '_';
 }
 
 static bool
@@ -107,9 +107,8 @@ skip_whitespace_and_comments()
     }
 }
 
-// FIXME (match?)
 static bool
-follows_string(int offset, const char *literal, int len)
+match_literal(int offset, const char *literal, int len)
 {
     if (offset + len > scanner.len)
         return false;
@@ -329,7 +328,7 @@ parse_string(CfgEntry *entry, CfgError *err)
 static int
 parse_true(CfgEntry *entry, CfgError *err)
 {
-    if (!follows_string(cur(), "true", 4))
+    if (!match_literal(cur(), "true", 4))
         return error(err, "invalid literal");
 
     // Consume "true"
@@ -343,7 +342,7 @@ parse_true(CfgEntry *entry, CfgError *err)
 static int
 parse_false(CfgEntry *entry, CfgError *err)
 {
-    if (!follows_string(cur(), "false", 5))
+    if (!match_literal(cur(), "false", 5))
         return error(err, "invalid literal");
 
     // Consume "false"
@@ -357,7 +356,7 @@ parse_false(CfgEntry *entry, CfgError *err)
 static int
 parse_rgba(CfgEntry *entry, CfgError *err)
 {
-    if (!follows_string(cur(), "rgba", 4))
+    if (!match_literal(cur(), "rgba", 4))
         return error(err, "invalid literal");
 
     // Consume "rgba"
@@ -442,8 +441,6 @@ parse_literal(CfgEntry *entry, CfgError *err)
         return error(err, "invalid literal");
     }
 }
-
-// CONSUME NUM HERE
 
 static int
 parse_number(CfgEntry *entry, CfgError *err)

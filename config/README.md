@@ -58,7 +58,7 @@ main(void)
 
 -   A line is composed of a key, a colon (`:`), a value, and a newline (`\n`)
 
--   A key is a sequence of one or more alphabetic characters or dots (`.`)
+-   A key is a sequence of one or more alphabetic characters, dots (`.`) or underscores (`_`)
 
 -   A value can be one of the following types: string, boolean, integer, float, or color
 
@@ -81,7 +81,7 @@ main(void)
 ```
 cfg   ::= line*
 line  ::= key ':' val '\n'
-key   ::= (alpha | '.')+
+key   ::= (alpha | '.' | '_')+
 val   ::= str | bool | int | float | color
 
 str   ::= '"' (alpha | punct | digit | blank)+ '"'
