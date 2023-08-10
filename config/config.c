@@ -23,35 +23,15 @@ init_scanner(const char *src, int src_len)
 }
 
 static bool
-is_key(char ch)
-{
-    return isalpha(ch) || ch == '.' || ch == '_';
-}
-
-static bool
-is_string(char ch)
-{
-    return isalnum(ch) || isblank(ch) || (ispunct(ch) && ch != '"');
-}
-
-static bool
 is_at_end()
 {
     return scanner.cur >= scanner.len;
 }
 
-static char
-advance()
+static int
+cur()
 {
-    return scanner.src[scanner.cur++];
-}
-
-static char
-advance2(int n)
-{
-    for (int i = 0; i < n - 1; i++)
-        advance();
-    return advance();
+    return scanner.cur;
 }
 
 static char
@@ -68,10 +48,18 @@ peek_next()
     return scanner.src[scanner.cur + 1];
 }
 
-static int
-cur()
+static char
+advance()
 {
-    return scanner.cur;
+    return scanner.src[scanner.cur++];
+}
+
+static char
+advance2(int n)
+{
+    for (int i = 0; i < n - 1; i++)
+        advance();
+    return advance();
 }
 
 static void
@@ -107,6 +95,14 @@ skip_whitespace_and_comments()
     }
 }
 
+static void
+copy_slice_into(int src_off, int src_len, char *dst, int max)
+{
+    assert(src_len < max);
+    memcpy(dst, scanner.src + src_off, src_len);
+    dst[src_len] = '\0';
+}
+
 static bool
 match_literal(int offset, const char *literal, int len)
 {
@@ -115,46 +111,16 @@ match_literal(int offset, const char *literal, int len)
     return !strncmp(scanner.src + offset, literal, len);
 }
 
-static int
-consume_number(float *number, bool *is_int)
+static bool
+is_key(char ch)
 {
-    bool is_float = false;
-    int sign = 1;
-    int int_part = 0;
-    float fract_part = 0;
+    return isalpha(ch) || ch == '.' || ch == '_';
+}
 
-    if (!is_at_end() && peek() == '-' && isdigit(peek_next())) {
-        // Consume '-'
-        advance();
-        sign = -1;
-    }
-
-    if (!is_at_end() && !isdigit(peek()))
-        return -1;
-
-    while (!is_at_end() && isdigit(peek()))
-        int_part = int_part * 10 + (advance() - '0');
-
-    if (!is_at_end() && peek() == '.') {
-        advance();
-        is_float = true;
-    }
-
-    if (!is_float) {
-        *is_int = true;
-        *number = sign * int_part;
-    } else {
-        int div = 1;
-        while (!is_at_end() && isdigit(peek())) {
-            fract_part = fract_part * 10 + (advance() - '0');
-            div *= 10;
-        }
-        float float_ = int_part + (fract_part / div);
-        *is_int = false;
-        *number = sign * float_;
-    }
-
-    return 0;
+static bool
+is_string(char ch)
+{
+    return isalnum(ch) || isblank(ch) || (ispunct(ch) && ch != '"');
 }
 
 static void
@@ -169,7 +135,7 @@ init_error(CfgError *err)
 static int
 error(CfgError *err, const char *fmt, ...)
 {
-    const char prefix[] = "";  // "CfgError: ";
+    const char prefix[] = "";
     const int prefix_len = sizeof(prefix) - 1;
 
     err->off = cur();
@@ -291,14 +257,6 @@ cfg_fprint_error(FILE *stream, CfgError *err)
 #endif
 }
 
-static void
-copy_slice_into(int src_off, int src_len, char *dst, int max)
-{
-    assert(src_len < max);
-    memcpy(dst, scanner.src + src_off, src_len);
-    dst[src_len] = '\0';
-}
-
 static int
 parse_string(CfgEntry *entry, CfgError *err)
 {
@@ -322,6 +280,141 @@ parse_string(CfgEntry *entry, CfgError *err)
 
     copy_slice_into(val_offset, val_len, entry->val.str, sizeof(entry->val.str));
     entry->type = TYPE_STR;
+    return 0;
+}
+
+static int
+consume_number(float *number, bool *is_int)
+{
+    bool is_float = false;
+    int sign = 1;
+    int int_part = 0;
+    float fract_part = 0;
+
+    if (!is_at_end() && peek() == '-' && isdigit(peek_next())) {
+        // Consume '-'
+        advance();
+        sign = -1;
+    }
+
+    if (!is_at_end() && !isdigit(peek()))
+        return -1;
+
+    while (!is_at_end() && isdigit(peek()))
+        int_part = int_part * 10 + (advance() - '0');
+
+    if (!is_at_end() && peek() == '.') {
+        advance();
+        is_float = true;
+    }
+
+    if (!is_float) {
+        *is_int = true;
+        *number = sign * int_part;
+    } else {
+        int div = 1;
+        while (!is_at_end() && isdigit(peek())) {
+            fract_part = fract_part * 10 + (advance() - '0');
+            div *= 10;
+        }
+        float float_ = int_part + (fract_part / div);
+        *is_int = false;
+        *number = sign * float_;
+    }
+
+    return 0;
+}
+
+static int
+parse_number(CfgEntry *entry, CfgError *err)
+{
+    bool is_int;
+    float number;
+    if (consume_number(&number, &is_int) != 0)
+        return error(err, "number expected");
+
+    if (is_int) {
+        entry->val.int_ = (int) number;
+        entry->type = TYPE_INT;
+    } else {
+        entry->val.float_ = number;
+        entry->type = TYPE_FLOAT;
+    }
+
+    return 0;
+}
+
+static int
+parse_rgba(CfgEntry *entry, CfgError *err)
+{
+    if (!match_literal(cur(), "rgba", 4))
+        return error(err, "invalid literal");
+
+    // Consume "rgba"
+    advance2(4);
+
+    // Skip blank space between 'a' and '('
+    skip_blank();
+
+    if (is_at_end() || peek() != '(')
+        return error(err, "'(' expected");
+
+    // Consume '('
+    advance();
+
+    bool is_int;
+    uint8_t rgb[3];
+    for (int i = 0; i < 3; i++) {
+        // Skip blank space preceding the number
+        skip_blank();
+
+        float number;
+        if (consume_number(&number, &is_int) != 0)
+            return error(err, "number expected");
+
+        if (!is_int || number < 0 || number > 255)
+            return error(err, "red, blue and green must be "
+                              "integers in range (0, 255)");
+
+        rgb[i] = (uint8_t) number;
+
+        // Skip blank space following the number
+        skip_blank();
+
+        if (is_at_end() || peek() != ',')
+            return error(err, "',' expected");
+
+        // Consume ','
+        advance();
+    }
+
+    // Skip blank space preceding the number
+    skip_blank();
+
+    float alpha;
+    if (consume_number(&alpha, &is_int) != 0)
+        return error(err, "number expected");
+
+    if (alpha < 0 || alpha > 1)
+        return error(err, "alpha must be in range (0, 1)");
+
+    // Skip blank space following the number
+    skip_blank();
+
+    if (is_at_end() || peek() != ')')
+        return error(err, "')' expected");
+
+    // Consume ')'
+    advance();
+
+    CfgColor color = {
+        .r = rgb[0],
+        .g = rgb[1],
+        .b = rgb[2],
+        .a = (uint8_t) (alpha * 255),
+    };
+    entry->val.color = color;
+    entry->type = TYPE_COLOR;
     return 0;
 }
 
@@ -354,80 +447,6 @@ parse_false(CfgEntry *entry, CfgError *err)
 }
 
 static int
-parse_rgba(CfgEntry *entry, CfgError *err)
-{
-    if (!match_literal(cur(), "rgba", 4))
-        return error(err, "invalid literal");
-
-    // Consume "rgba"
-    advance2(4);
-
-    // Skip whitespace between 'a' and '('
-    skip_blank();
-
-    if (is_at_end() || peek() != '(')
-        return error(err, "'(' expected");
-
-    // Consume '('
-    advance();
-
-    bool is_int;
-    uint8_t rgb[3];
-    for (int i = 0; i < 3; i++) {
-        // Skip whitespace preceding the number
-        skip_blank();
-
-        float number;
-        if (consume_number(&number, &is_int) != 0)
-            return error(err, "number expected");
-
-        if (!is_int || number < 0 || number > 255)
-            return error(err, "red, blue and green must be "
-                              "integers in range (0, 255)");
-
-        rgb[i] = (uint8_t) number;
-
-        // Skip whitespace following the number
-        skip_blank();
-
-        if (is_at_end() || peek() != ',')
-            return error(err, "',' expected");
-
-        // Consume ','
-        advance();
-    }
-
-    // Skip whitespace preceding the alpha
-    skip_blank();
-
-    float alpha;
-    if (consume_number(&alpha, &is_int) != 0)
-        return error(err, "number expected");
-
-    if (alpha < 0 || alpha > 1)
-        return error(err, "alpha must be in range (0, 1)");
-
-    // Skip whitespace following alpha
-    skip_blank();
-
-    if (is_at_end() || peek() != ')')
-        return error(err, "')' expected");
-
-    // Consume ')'
-    advance();
-
-    CfgColor color = {
-        .r = rgb[0],
-        .g = rgb[1],
-        .b = rgb[2],
-        .a = (uint8_t) (alpha * 255),
-    };
-    entry->val.color = color;
-    entry->type = TYPE_COLOR;
-    return 0;
-}
-
-static int
 parse_literal(CfgEntry *entry, CfgError *err)
 {
     switch (peek()) {
@@ -440,25 +459,6 @@ parse_literal(CfgEntry *entry, CfgError *err)
     default:
         return error(err, "invalid literal");
     }
-}
-
-static int
-parse_number(CfgEntry *entry, CfgError *err)
-{
-    bool is_int;
-    float number;
-    if (consume_number(&number, &is_int) != 0)
-        return error(err, "number expected");
-
-    if (is_int) {
-        entry->val.int_ = (int) number;
-        entry->type = TYPE_INT;
-    } else {
-        entry->val.float_ = number;
-        entry->type = TYPE_FLOAT;
-    }
-
-    return 0;
 }
 
 static int
@@ -529,7 +529,7 @@ parse_entry(CfgEntry *entry, CfgError *err)
     if (parse_value(entry, err) != 0)
         return -1;
 
-    // Skip trailing whitespace after the value
+    // Skip trailing blank space after the value
     skip_blank();
 
     if (!is_at_end() && peek() == '#')
@@ -558,7 +558,6 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, CfgError *err)
     init_scanner(src, src_len);
 
     cfg->size = 0;
-
     skip_whitespace_and_comments();
 
     while (!is_at_end() && cfg->size < cfg->max_entries) {
@@ -570,6 +569,7 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, CfgError *err)
         cfg->size++;
         skip_whitespace_and_comments();
     }
+
     return 0;
 }
 
