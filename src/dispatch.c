@@ -1,22 +1,9 @@
 #include <stdio.h>
-#include <assert.h>
-#include <stdint.h>
-#include <string.h>
-#include <raylib.h>
-#include "event.h"
-#include "dialog.h"
-#include "buff_view.h"
-#include "split_view.h"
-#include "get_key_pressed_or_repeated.h"
-
-#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
-#define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
-
-#define MIN_FONT_SIZE 14
-#define MAX_FONT_SIZE 100
-#define INC_FONT_SIZE 2
-
-BufferViewStyle style;
+#include "style.h"
+#include "dispatch.h"
+#include "spawn_dialog.h"
+#include "widget/split_view.h"
+#include "utils/get_key_pressed_or_repeated.h"
 
 void openFileIntoWidget(Widget *widget, const char *file)
 {
@@ -29,7 +16,7 @@ void openFileIntoWidget(Widget *widget, const char *file)
     handleWidgetEvent(widget, event);
 }
 
-void saveFileInWidget(Widget *widget)
+static void saveFileInWidget(Widget *widget)
 {
     Event event;
     event.type = EVENT_SAVE;
@@ -39,7 +26,7 @@ void saveFileInWidget(Widget *widget)
     handleWidgetEvent(widget, event);
 }
 
-void insertCharIntoWidget(Widget *widget, int code)
+static void insertCharIntoWidget(Widget *widget, int code)
 {
     Event event;
     event.type = EVENT_TEXT;
@@ -50,10 +37,10 @@ void insertCharIntoWidget(Widget *widget, int code)
     handleWidgetEvent(widget, event);
 }
 
-void chooseFileAndOpenIntoWidget(Widget *widget)
+static void chooseFileAndOpenIntoWidget(Widget *widget)
 {
     char file[1024];
-    int num = chooseFile(file, sizeof(file));
+    int num = chooseFileToOpen(file, sizeof(file));
     if (num < 0)
         fprintf(stderr, "Failed to choose file\n");
     else if (num == 0)
@@ -62,21 +49,14 @@ void chooseFileAndOpenIntoWidget(Widget *widget)
         openFileIntoWidget(widget, file);
 }
 
-void split(SplitDirection dir)
+static void split(SplitDirection dir)
 {
     Widget *focus = getFocus();
-    if (!focus)
-        return;
-
-    Widget *new_widget = createBufferView(&style);
-    if (!new_widget)
-        return;
-
-    if (!splitView(dir, focus, new_widget))
-        freeWidget(new_widget);
+    if (focus)
+        stylizedSplitView(dir, focus, (Widget*) createStylizedBufferView());
 }
 
-void applyKeyToWidget(Widget *widget, int key)
+static void applyKeyToWidget(Widget *widget, int key)
 {
     Event event;
     event.type = EVENT_KEY;
@@ -87,7 +67,7 @@ void applyKeyToWidget(Widget *widget, int key)
     handleWidgetEvent(widget, event);
 }
 
-void clickOntoWidget(Widget *widget)
+static void clickOntoWidget(Widget *widget)
 {
     Event event;
     event.type = EVENT_MOUSE_LEFT_DOWN;
@@ -97,7 +77,7 @@ void clickOntoWidget(Widget *widget)
     handleWidgetEvent(widget, event);
 }
 
-void unclickFromWidget(Widget *widget)
+static void unclickFromWidget(Widget *widget)
 {
     Event event;
     event.type = EVENT_MOUSE_LEFT_UP;
@@ -107,24 +87,14 @@ void unclickFromWidget(Widget *widget)
     handleWidgetEvent(widget, event);
 }
 
-void increaseFontSize(void)
-{
-    style.font_size = MIN(style.font_size + INC_FONT_SIZE, MAX_FONT_SIZE);
-}
-
-void decreaseFontSize(void)
-{
-    style.font_size = MAX(style.font_size - INC_FONT_SIZE, MIN_FONT_SIZE);
-}
-
-void manageEvents(Widget *root)
+void dispatchEvents(Widget *root)
 {
     Widget *focus = getFocus();
     Widget *mouse_focus = getMouseFocus();
 
     if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT))
         clickOntoWidget(root);
-
+    
     if (mouse_focus && IsMouseButtonReleased(MOUSE_BUTTON_LEFT))
         unclickFromWidget(mouse_focus);
 
@@ -135,6 +105,15 @@ void manageEvents(Widget *root)
         event.mouse.x -= mouse_focus->last_offset.x;
         event.mouse.y -= mouse_focus->last_offset.y;
         handleWidgetEvent(mouse_focus, event);
+    }
+
+    Vector2 wheel = GetMouseWheelMoveV();
+    if (wheel.x != 0 || wheel.y != 0) {
+        Event event;
+        event.type = EVENT_MOUSE_WHEEL;
+        event.mouse = GetMousePosition();
+        event.wheel = wheel;
+        handleWidgetEvent(root, event);
     }
     
     int first_repeat_freq = 500000;
@@ -161,52 +140,4 @@ void manageEvents(Widget *root)
 
     for (int code; (code = GetCharPressed()) > 0;)
         if (focus) insertCharIntoWidget(focus, code);
-}
-
-int main(int argc, char **argv)
-{
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-    SetTargetFPS(60);
-    InitWindow(720, 500, "SNB");
-    
-    style = (BufferViewStyle) {
-        .line_h   = 1,
-        .ruler_x  = 80,
-        .cursor_w = 3,
-        .pad_h = 10,
-        .pad_v = 10,
-        .color_cursor = RED,
-        .color_text   = BLACK,
-        .color_ruler  = GRAY,
-        .font_path = "SourceCodePro-Regular.ttf",
-        .font_size = 24,
-        .spaces_per_tab = 8,
-    };
-
-    const char *file;
-    if (argc > 1)
-        file = argv[1];
-    else
-        file = NULL;
-
-    Widget *root = createBufferView(&style);
-    if (root == NULL)
-        return -1;
-    root->parent = &root;
-
-    if (file)
-        openFileIntoWidget(root, file);
-
-    while (!WindowShouldClose()) {
-        manageEvents(root);
-        BeginDrawing();
-        ClearBackground(WHITE);
-        Vector2 offset = {0, 0};
-        Vector2 area = {GetScreenWidth(), GetScreenHeight()};
-        drawWidget(root, offset, area);
-        EndDrawing();
-    }
-    freeWidget(root);
-    CloseWindow();
-    return 0;
 }
