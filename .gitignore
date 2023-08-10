@@ -1,5 +1,9 @@
 snb
 snb.exe
+
 .clang-format
 
-cache/
+snb-dialog
+snb-dialog.exe
+
+cache

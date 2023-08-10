@@ -1,0 +1,141 @@
+{
+    name1
+    Memcheck:Param
+    ioctl(generic)
+    fun:ioctl
+    fun:D3DKMTLock2
+    obj:/usr/lib/wsl/lib/libd3d12core.so
+    obj:/usr/lib/wsl/drivers/u0385914.inf_amd64_728327554da2f068/B382773/amdxc64.so
+}
+{
+    name3
+    Memcheck:Param
+    ioctl(generic)
+    fun:ioctl
+    fun:D3DKMTQueryAdapterInfo
+    obj:/usr/lib/wsl/lib/libd3d12core.so
+    obj:/usr/lib/wsl/drivers/u0385914.inf_amd64_728327554da2f068/B382773/amdxc64.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Param
+   ioctl(generic)
+   fun:ioctl
+   fun:D3DKMTQueryAdapterInfo
+   obj:/usr/lib/wsl/lib/libd3d12core.so
+   obj:/usr/lib/wsl/lib/libd3d12core.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Param
+   ioctl(generic)
+   fun:ioctl
+   fun:D3DKMTWaitForSynchronizationObjectFromCpu
+   obj:/usr/lib/wsl/lib/libd3d12core.so
+   obj:/usr/lib/wsl/lib/libd3d12core.so
+   obj:/usr/lib/x86_64-linux-gnu/dri/swrast_dri.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr8
+   obj:/usr/lib/wsl/lib/libd3d12core.so
+   obj:/usr/lib/x86_64-linux-gnu/dri/swrast_dri.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr1
+   fun:memmove
+   obj:/usr/lib/x86_64-linux-gnu/dri/swrast_dri.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr2
+   fun:memmove
+   obj:/usr/lib/x86_64-linux-gnu/dri/swrast_dri.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   fun:memmove
+   obj:/usr/lib/x86_64-linux-gnu/dri/swrast_dri.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr8
+   fun:memmove
+   obj:/usr/lib/x86_64-linux-gnu/dri/swrast_dri.so
+}
+{
+    name10
+    Memcheck:Addr1
+    fun:memcpy@GLIBC_2.2.5
+    obj:/usr/lib/wsl/drivers/u0385914.inf_amd64_728327554da2f068/B382773/amdxc64.so
+}
+{
+    name10
+    Memcheck:Addr2
+    fun:memcpy@GLIBC_2.2.5
+    obj:/usr/lib/wsl/drivers/u0385914.inf_amd64_728327554da2f068/B382773/amdxc64.so
+}
+{
+    name10
+    Memcheck:Addr4
+    fun:memcpy@GLIBC_2.2.5
+    obj:/usr/lib/wsl/drivers/u0385914.inf_amd64_728327554da2f068/B382773/amdxc64.so
+}
+{
+    name10
+    Memcheck:Addr8
+    fun:memcpy@GLIBC_2.2.5
+    obj:/usr/lib/wsl/drivers/u0385914.inf_amd64_728327554da2f068/B382773/amdxc64.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr8
+   obj:/usr/lib/wsl/drivers/u0385914.inf_amd64_728327554da2f068/B382773/amdxc64.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr4
+   obj:/usr/lib/wsl/drivers/u0385914.inf_amd64_728327554da2f068/B382773/amdxc64.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr2
+   obj:/usr/lib/wsl/drivers/u0385914.inf_amd64_728327554da2f068/B382773/amdxc64.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Addr1
+   obj:/usr/lib/wsl/drivers/u0385914.inf_amd64_728327554da2f068/B382773/amdxc64.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value8
+   obj:/usr/lib/wsl/drivers/u0385914.inf_amd64_728327554da2f068/B382773/amdxc64.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value4
+   obj:/usr/lib/wsl/drivers/u0385914.inf_amd64_728327554da2f068/B382773/amdxc64.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value2
+   obj:/usr/lib/wsl/drivers/u0385914.inf_amd64_728327554da2f068/B382773/amdxc64.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value1
+   obj:/usr/lib/wsl/drivers/u0385914.inf_amd64_728327554da2f068/B382773/amdxc64.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Jump
+   obj:/usr/lib/wsl/drivers/u0385914.inf_amd64_728327554da2f068/B382773/amdxc64.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   obj:/usr/lib/wsl/drivers/u0385914.inf_amd64_728327554da2f068/B382773/amdxc64.so
+}
