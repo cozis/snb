@@ -42,7 +42,7 @@ main(void)
                                           .r = 255,
                                           .g = 255,
                                           .b = 255,
-                                          .a = 1,
+                                          .a = 255,
                                       });
 
     free(entries);
