@@ -93,77 +93,77 @@ static void applyStyle(void)
         .roundness = getParamFloatRange("widget.roundness", 0, 0, 1),
         .segments  = getParamIntMin("widget.segments", 0, 0),
 
-        .color_background = getParamColor("widget.background", (Color) {0x19, 0x1b, 0x27, 0xff}),
+        .color_background = getParamColor("widget.background", WHITE),
 
-        .scrollbar_thumb_roundness = getParamFloatRange("widget.scrollbar.thumb.roundness", 0.5, 0, 1),
-        .scrollbar_thumb_segments  = getParamIntMin("widget.scrollbar.thumb.segments", 5, 0),
+        .scrollbar_thumb_roundness = getParamFloatRange("widget.scrollbar.thumb.roundness", 0, 0, 1),
+        .scrollbar_thumb_segments  = getParamIntMin("widget.scrollbar.thumb.segments", 0, 0),
         .scrollbar_thumb_width     = getParamIntMin("widget.scrollbar.thumb.width", 15, 0),
-        .scrollbar_thumb_margin    = getParamIntMin("widget.scrollbar.thumb.margin", 5, 0),
+        .scrollbar_thumb_margin    = getParamIntMin("widget.scrollbar.thumb.margin", 0, 0),
 
-        .scrollbar_color              = getParamColor("widget.scrollbar.background", (Color) {0x0f, 0x10, 0x16, 0xff}),
-        .scrollbar_track_color        = getParamColor("widget.scrollbar.track.color", (Color) {0x46, 0x49, 0x56, 0xff}),
-        .scrollbar_thumb_color        = getParamColor("widget.scrollbar.thumb.color", LIGHTGRAY),
-        .scrollbar_thumb_active_color = getParamColor("widget.scrollbar.thumb.active", (Color) {0x39, 0x82, 0x38, 0xff}),
+        .scrollbar_color              = getParamColor("widget.scrollbar.background", WHITE),
+        .scrollbar_track_color        = getParamColor("widget.scrollbar.track.color", LIGHTGRAY),
+        .scrollbar_thumb_color        = getParamColor("widget.scrollbar.thumb.color", RED),
+        .scrollbar_thumb_active_color = getParamColor("widget.scrollbar.thumb.active", RED),
     };
 
     style = (BufferViewStyle) {
         .line_h   = getParamFloatMin("buffer.line.h", 1, 0.1),
 
         .ruler_x  = getParamIntMin("buffer.ruler.x", 80, 0),
-        .color_ruler  = getParamColor("buffer.ruler.color", (Color) {0x46, 0x49, 0x56, 0xff}),
+        .color_ruler  = getParamColor("buffer.ruler.color", LIGHTGRAY),
 
-        .pad_h    = getParamIntMin("buffer.padding.h", 10, 0),
-        .pad_v    = getParamIntMin("buffer.padding.w", 10, 0),
+        .pad_h    = getParamIntMin("buffer.padding.h", 0, 0),
+        .pad_v    = getParamIntMin("buffer.padding.v", 0, 0),
         
-        .cursor_w = getParamIntMin("buffer.cursor.w", 3, 1),
-        .color_cursor = getParamColor("buffer.cursor.color", RED),
-        .color_text   = getParamColor("buffer.text.color", LIGHTGRAY),
+        .cursor_w = getParamIntMin("buffer.cursor.w", 1, 1),
+        .color_cursor = getParamColor("buffer.cursor.color", BLACK),
+        .color_text   = getParamColor("buffer.text.color", BLACK),
         
-        .font_file = getParamString("buffer.font.path", "SourceCodePro-Regular.ttf"),
-        .font_size = getParamIntMin("buffer.font.size", 24, 0),
+        .font_file = getParamString("buffer.font.file", "SourceCodePro-Regular.ttf"),
+        .font_size = getParamIntMin("buffer.font.size", 20, 0),
         .spaces_per_tab = getParamIntMin("buffer.spaces_per_tab", 8, 1),
     };
 
     button_style = (ButtonStyle) {
-        .roundness = getParamFloatRange("button.roundness", 0.3, 0, 1),
-        .segments  = getParamIntMin("button.segments", 10, 0),
-        .color_text = getParamColor("button.text.color", (Color) {0xcc, 0xcc, 0xcc, 0xff}),
-        .color_text_active = getParamColor("button.text.active", (Color) {0x33, 0x33, 0x33, 0xff}),
+        .roundness = getParamFloatRange("button.roundness", 0, 0, 1),
+        .segments  = getParamIntMin("button.segments", 0, 0),
+        .color_text = getParamColor("button.text.color", GRAY),
+        .color_text_active = getParamColor("button.text.active", RED),
         .color_background = getParamColor("button.background", (Color) {0x40, 0x40, 0x40, 0xff}),
-        .color_background_active = getParamColor("button.background.active", (Color) {0x83, 0xc5, 0xbf, 0xff}),
-        .font_size = getParamIntMin("button.font.size", 24, 0),
+        .color_background_active = getParamColor("button.background.active", RED),
+        .font_size = getParamIntMin("button.font.size", 20, 0),
         .font_file = getParamString("button.font.file", "SourceCodePro-Regular.ttf"),
     };
 
     base_input_style = base_style;
-    base_input_style.roundness = getParamFloatRange("widget_input.roundness", 0.3, 0, 1);
-    base_input_style.segments  = getParamIntMin("widget_input.segments", 10, 0);
-    base_input_style.color_background = getParamColor("widget_input.background", (Color) {0x46, 0x49, 0x56, 0xff});
+    base_input_style.roundness = getParamFloatRange("widget_input.roundness", 0, 0, 1);
+    base_input_style.segments  = getParamIntMin("widget_input.segments", 0, 0);
+    base_input_style.color_background = getParamColor("widget_input.background", GRAY);
     base_input_style.show_scrollbar_h = getParamBool("widget_input.scrollbar.show.h", false);
 
     base_table_style = base_style;
     base_table_style.roundness = getParamFloatRange("widget_table.roundness", 0, 0, 1);
     base_table_style.segments  = getParamIntMin("widget_table.segments", 0, 0);
-    base_table_style.color_background = getParamColor("widget_table.background", (Color) {0x46, 0x49, 0x56, 0xff});
-
+    base_table_style.color_background = getParamColor("widget_table.background", WHITE);
+    
     input_style = (TextInputStyle) {
         .line_h   = getParamFloatMin("text_input.line.h", 1, 0.1),
-        .cursor_w = getParamIntMin("text_input.cursor.w", 3, 1),
-        .pad_h    = getParamIntMin("text_input.padding.h", 3, 0),
-        .pad_v    = getParamIntMin("text_input.padding.v", 3, 0),
+        .cursor_w = getParamIntMin("text_input.cursor.w", 1, 1),
+        .pad_h    = getParamIntMin("text_input.padding.h", 0, 0),
+        .pad_v    = getParamIntMin("text_input.padding.v", 0, 0),
         .color_cursor = getParamColor("text_input.cursor.color", RED),
-        .color_text   = getParamColor("text_input.text.color", LIGHTGRAY),
+        .color_text   = getParamColor("text_input.text.color", BLACK),
         .font_file = getParamString("text_input.font.file", "SourceCodePro-Regular.ttf"),
-        .font_size = getParamIntMin("text_input.font.size", 24, 0),
+        .font_size = getParamIntMin("text_input.font.size", 20, 0),
         .spaces_per_tab = getParamIntMin("text_input.spaces_per_tab", 8, 1),
     };
 
     table_style = (TableStyle) {
-        .entry_h = getParamIntMin("table.entry.h", 25, 0),
-        .pad_h = getParamIntMin("table.padding.h", 5, 0),
-        .pad_v = getParamIntMin("table.padding.v", 5, 0),
+        .entry_h = getParamIntMin("table.entry.h", 20, 0),
+        .pad_h = getParamIntMin("table.padding.h", 0, 0),
+        .pad_v = getParamIntMin("table.padding.v", 0, 0),
         .font_file = getParamString("table.font.file", "SourceCodePro-Regular.ttf"),
-        .font_size = getParamIntMin("table.font.size", 25, 0),
+        .font_size = getParamIntMin("table.font.size", 20, 0),
         .font_color = getParamColor("table.font.color", BLACK),
         .font_active = getParamColor("table.font.active", RED),
         .background_active = getParamColor("table.entry.active", GREEN),
