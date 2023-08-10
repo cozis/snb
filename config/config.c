@@ -306,6 +306,7 @@ parse_string(CfgEntry *entry, CfgError *err)
     // Consume opening '"'
     advance();
 
+    // Consume string
     int val_offset = cur();
     while (!is_at_end() && is_string(peek()))
         advance();
@@ -430,21 +431,16 @@ parse_rgba(CfgEntry *entry, CfgError *err)
 static int
 parse_literal(CfgEntry *entry, CfgError *err)
 {
-    int code;
     switch (peek()) {
     case 't':
-        code = parse_true(entry, err);
-        break;
+        return parse_true(entry, err);
     case 'f':
-        code = parse_false(entry, err);
-        break;
+        return parse_false(entry, err);
     case 'r':
-        code = parse_rgba(entry, err);
-        break;
+        return parse_rgba(entry, err);
     default:
         return error(err, "invalid literal");
     }
-    return code;
 }
 
 // CONSUME NUM HERE

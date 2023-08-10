@@ -28,7 +28,6 @@ main(int argc, char *argv[])
 
     if (res != 0) {
         cfg_fprint_error(stderr, &err);
-        //fprintf(stderr, "Error at %d:%d :: %s\n", err.row, err.col, err.msg);
         free(entries);
         return 1;
     }

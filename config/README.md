@@ -21,8 +21,8 @@ main(void)
     CfgEntry *entries = malloc(64 * sizeof(CfgEntry));
     cfg_init(&cfg, entries, 64);
 
-    char err[CFG_MAX_ERR_LEN + 1];
-    int res = cfg_load("sample.cfg", &cfg, err);
+    CfgError err;
+    int res = cfg_load("sample.cfg", &cfg, &err);
 
     if (res != 0) {
         fprintf(stderr, "%s\n", err);
@@ -62,7 +62,7 @@ main(void)
 
 -   A value can be one of the following types: string, boolean, integer, float, or color
 
--   A comment starts with a `#` and can placed on its own line or at the end of a line containing an entry
+-   A comment starts with a `#` and can placed on its own line or at the end of an entry
 
 ## Data types
 
@@ -100,4 +100,8 @@ color ::= 'rgba(' digit+ ',' digit+ ',' digit+ ',' digit+ ')'
 
 ## Acknowledgements
 
-A big thank you to [Cozis](https://github.com/cozis) for helping me out and giving me lots of advice throughout the entire project.
+This project was built as a collaborative work by [Haru](https://github.com/0xHaru) and [Cozis](https://github.com/cozis).
+
+## License
+
+This project uses the [GPLv3]() license.
