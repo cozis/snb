@@ -4,13 +4,13 @@ CFLAGS=-Wall -Wextra -Wpedantic -g
 
 .PHONY: all clean
 
-all: config
+all: example
 
-config: main.c config.c config.h
-	$(CC) main.c config.c -o $@ $(CFLAGS)
+example: example.c config.c config.h
+	$(CC) example.c config.c -o $@ $(CFLAGS)
 
 fuzz: fuzz.c config.c
 	clang -O1 -g -fsanitize=fuzzer,address,undefined $^ -o $@
 
 clean:
-	rm config fuzz
+	rm example fuzz

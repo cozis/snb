@@ -9,7 +9,7 @@ A parser for a simple configuration file format.
 font: "JetBrainsMono Nerd Font"
 font.size: 14
 zoom: 1.5
-lineNumbers: true
+line_numbers: true
 bg.color: rgba(255, 255, 255, 1)
 ```
 
@@ -36,7 +36,7 @@ main(void)
     char* font = cfg_get_str(cfg, "font", "Noto Sans Mono");
     int font_size = cfg_get_int(cfg, "font.size", 12);
     float zoom = cfg_get_float(cfg, "zoom", 1.0);
-    bool line_num = cfg_get_bool(cfg, "lineNumbers", true);
+    bool line_num = cfg_get_bool(cfg, "line_numbers", true);
     CfgColor bg_color = cfg_get_color(cfg, "bg.color",
                                       (CfgColor){
                                           .r = 255,
@@ -49,6 +49,8 @@ main(void)
     return 0;
 }
 ```
+
+A fully working example can be found in `example.c`, to build it just run `make`.
 
 ## Specification
 
