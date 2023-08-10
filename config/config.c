@@ -280,7 +280,7 @@ parse_string(CfgEntry *entry, CfgError *err)
     advance();
 
     copy_slice_into(val_offset, val_len, entry->val.str, sizeof(entry->val.str));
-    entry->type = TYPE_STR;
+    entry->type = CFG_TYPE_STR;
     return 0;
 }
 
@@ -336,10 +336,10 @@ parse_number(CfgEntry *entry, CfgError *err)
 
     if (is_int) {
         entry->val.int_ = (int) number;
-        entry->type = TYPE_INT;
+        entry->type = CFG_TYPE_INT;
     } else {
         entry->val.float_ = number;
-        entry->type = TYPE_FLOAT;
+        entry->type = CFG_TYPE_FLOAT;
     }
 
     return 0;
@@ -415,7 +415,7 @@ parse_rgba(CfgEntry *entry, CfgError *err)
         .a = (uint8_t) (alpha * 255),
     };
     entry->val.color = color;
-    entry->type = TYPE_COLOR;
+    entry->type = CFG_TYPE_COLOR;
     return 0;
 }
 
@@ -429,7 +429,7 @@ parse_true(CfgEntry *entry, CfgError *err)
     advance2(4);
 
     entry->val.bool_ = true;
-    entry->type = TYPE_BOOL;
+    entry->type = CFG_TYPE_BOOL;
     return 0;
 }
 
@@ -443,7 +443,7 @@ parse_false(CfgEntry *entry, CfgError *err)
     advance2(5);
 
     entry->val.bool_ = false;
-    entry->type = TYPE_BOOL;
+    entry->type = CFG_TYPE_BOOL;
     return 0;
 }
 
@@ -641,31 +641,31 @@ get_val(Cfg cfg, const char *key, void *default_, CfgValType type)
 char *
 cfg_get_str(Cfg cfg, const char *key, char *default_)
 {
-    return (char *) get_val(cfg, key, default_, TYPE_STR);
+    return (char *) get_val(cfg, key, default_, CFG_TYPE_STR);
 }
 
 bool
 cfg_get_bool(Cfg cfg, const char *key, bool default_)
 {
-    return *(bool *) get_val(cfg, key, &default_, TYPE_BOOL);
+    return *(bool *) get_val(cfg, key, &default_, CFG_TYPE_BOOL);
 }
 
 int
 cfg_get_int(Cfg cfg, const char *key, int default_)
 {
-    return *(int *) get_val(cfg, key, &default_, TYPE_INT);
+    return *(int *) get_val(cfg, key, &default_, CFG_TYPE_INT);
 }
 
 float
 cfg_get_float(Cfg cfg, const char *key, float default_)
 {
-    return *(float *) get_val(cfg, key, &default_, TYPE_FLOAT);
+    return *(float *) get_val(cfg, key, &default_, CFG_TYPE_FLOAT);
 }
 
 CfgColor
 cfg_get_color(Cfg cfg, const char *key, CfgColor default_)
 {
-    return *(CfgColor *) get_val(cfg, key, &default_, TYPE_COLOR);
+    return *(CfgColor *) get_val(cfg, key, &default_, CFG_TYPE_COLOR);
 }
 
 void
@@ -675,19 +675,19 @@ cfg_fprint(FILE *stream, Cfg cfg)
         fprintf(stream, "%s: ", cfg.entries[i].key);
 
         switch (cfg.entries[i].type) {
-        case TYPE_STR:
+        case CFG_TYPE_STR:
             fprintf(stream, "\"%s\"\n", cfg.entries[i].val.str);
             break;
-        case TYPE_BOOL:
+        case CFG_TYPE_BOOL:
             fprintf(stream, "%s\n", cfg.entries[i].val.bool_ ? "true" : "false");
             break;
-        case TYPE_INT:
+        case CFG_TYPE_INT:
             fprintf(stream, "%d\n", cfg.entries[i].val.int_);
             break;
-        case TYPE_FLOAT:
+        case CFG_TYPE_FLOAT:
             fprintf(stream, "%f\n", cfg.entries[i].val.float_);
             break;
-        case TYPE_COLOR:;
+        case CFG_TYPE_COLOR:;
             CfgColor c = cfg.entries[i].val.color;
             fprintf(stream, "rgba(%d, %d, %d, %d)\n", c.r, c.g, c.b, c.a);
             break;

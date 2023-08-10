@@ -32,11 +32,11 @@ typedef struct {
 } CfgColor;
 
 typedef enum {
-    TYPE_STR,
-    TYPE_BOOL,
-    TYPE_INT,
-    TYPE_FLOAT,
-    TYPE_COLOR,
+    CFG_TYPE_STR,
+    CFG_TYPE_BOOL,
+    CFG_TYPE_INT,
+    CFG_TYPE_FLOAT,
+    CFG_TYPE_COLOR,
 } CfgValType;
 
 typedef union {
