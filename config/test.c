@@ -30,6 +30,12 @@ typedef struct {
     const char *err;  // Expected error message
 } TestCase;
 
+typedef struct {
+    int total;
+    int passed;
+    int failed;
+} Scoreboard;
+
 static const TestCase test_cases[] = {
     {
         .type = TC_SUCC,
@@ -402,6 +408,7 @@ static const TestCase test_cases[] = {
 };
 
 static FILE *stream;
+static Scoreboard scoreboard;
 
 bool
 assert_eq_entry(const CfgEntry *expected, const CfgEntry *actual)
@@ -468,6 +475,20 @@ assert_eq_entries(const TestCase expected, const CfgEntry *actual_entries)
     return true;
 }
 
+void
+log_result(TestCase tc, bool failed)
+{
+    char *prefix = tc.type ? "ERROR   CASE" : "SUCCESS CASE";
+
+    if (failed) {
+        fprintf(stream, "%s - " RED "FAILED " RESET "(%s:%d)\n", prefix, __FILE__,
+                tc.line);
+    } else {
+        fprintf(stream, "%s - " GREEN "PASSED " RESET "(%s:%d)\n", prefix, __FILE__,
+                tc.line);
+    }
+}
+
 static void
 run_test_case(TestCase tc)
 {
@@ -483,26 +504,39 @@ run_test_case(TestCase tc)
     switch (tc.type) {
     case TC_SUCC:
         if (res != 0) {
-            fprintf(stream, "SUCCESS CASE L%d - " RED "FAILED\n" RESET, tc.line);
             cfg_fprint_error(stream, &err);
+            log_result(tc, true);
+            scoreboard.failed++;
         } else {
             if (tc.size != cfg.size) {
                 fprintf(stream, "Size mismatch between [expected] and [actual]\n");
+                log_result(tc, true);
+                scoreboard.failed++;
             } else if (assert_eq_entries(tc, cfg.entries)) {
-                fprintf(stream, "SUCCESS CASE test.c:%d - " GREEN "PASSED\n" RESET,
-                        tc.line);
+                log_result(tc, false);
+                scoreboard.passed++;
             } else {
-                fprintf(stream, "SUCCESS CASE L%d - " RED "FAILED\n" RESET, tc.line);
+                log_result(tc, true);
+                scoreboard.failed++;
             }
         }
         break;
 
     case TC_ERR:
-        if (res != 0 && !strcmp(tc.err, err.msg)) {
-            fprintf(stream, "ERROR CASE L%d - " GREEN "PASSED\n" RESET, tc.line);
+        if (res != 0) {
+            if (!strcmp(tc.err, err.msg)) {
+                log_result(tc, false);
+                scoreboard.passed++;
+            } else {
+                fprintf(stream,
+                        "Error message mismatch between [expected] and [actual]\n");
+                log_result(tc, false);
+                scoreboard.failed++;
+            }
         } else {
-            fprintf(stream, "ERROR CASE L%d - " RED "FAILED\n" RESET, tc.line);
-            cfg_fprint_error(stream, &err);
+            fprintf(stream, "Error case was parsed successfully\n");
+            log_result(tc, true);
+            scoreboard.failed++;
         }
         break;
     }
@@ -521,10 +555,13 @@ main(void)
     stream = stdout;
 #endif
 
-    int total_tests = sizeof(test_cases) / sizeof(test_cases[0]);
-    for (int i = 0; i < total_tests; i++) {
+    scoreboard.total = sizeof(test_cases) / sizeof(test_cases[0]);
+    for (int i = 0; i < scoreboard.total; i++) {
         run_test_case(test_cases[i]);
     }
+
+    fprintf(stream, "Total: %d Passed: %d Failed: %d\n", scoreboard.total,
+            scoreboard.passed, scoreboard.failed);
 
 #ifdef LOGFILE
     fclose(stream);
