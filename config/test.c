@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,7 +6,8 @@
 #include "config.h"
 
 #define COLORS
-#define MAX_ENTRIES 64
+#define TEST_MAX_ENTRIES 64
+#define TEST_MAX_MSG 64
 
 #ifdef COLORS
 #define RED "\e[1;31m"
@@ -27,7 +29,7 @@ typedef struct {
 } TestCase;
 
 // clang-format off
-static const TestCase cases[] = {
+static const TestCase test_cases[] = {
     // ** SUCCESS CASES ** //
     {
         // Test: average config file
@@ -46,7 +48,7 @@ static const TestCase cases[] = {
                 { .key = "line_numbers", .type = CFG_TYPE_BOOL, .val.bool_ = true },
                 { .key = "bg.color", .type = CFG_TYPE_COLOR, .val.color = {.r = 255, .g = 255, .b = 255, .a = 255} }
             },
-            .max_entries = MAX_ENTRIES,
+            .max_entries = TEST_MAX_ENTRIES,
             .size = 5
         }
     },
@@ -68,7 +70,7 @@ static const TestCase cases[] = {
                 { .key = ".", .type = CFG_TYPE_BOOL, .val.bool_ = true },
                 { .key = "_", .type = CFG_TYPE_BOOL, .val.bool_ = true },
             },
-            .max_entries = MAX_ENTRIES,
+            .max_entries = TEST_MAX_ENTRIES,
             .size = 6
         }
     },
@@ -82,7 +84,7 @@ static const TestCase cases[] = {
                 { .key = "a", .type = CFG_TYPE_STR, .val.str = "`~!@#$^&*()-_=+[]{}|;:',.<>/?" },
                 { .key = "b", .type = CFG_TYPE_COLOR, .val.color = {.r = 0, .g = 255, .b = 127, .a = 1} },
             },
-            .max_entries = MAX_ENTRIES,
+            .max_entries = TEST_MAX_ENTRIES,
             .size = 2
         }
     },
@@ -96,7 +98,7 @@ static const TestCase cases[] = {
                 { .key = "a", .type = CFG_TYPE_BOOL, .val.bool_ = true },
                 { .key = "b", .type = CFG_TYPE_BOOL, .val.bool_ = true },
             },
-            .max_entries = MAX_ENTRIES,
+            .max_entries = TEST_MAX_ENTRIES,
             .size = 2
         }
     },
@@ -110,7 +112,7 @@ static const TestCase cases[] = {
                 { .key = "a", .type = CFG_TYPE_INT, .val.int_ = -10 },
                 { .key = "b", .type = CFG_TYPE_INT, .val.int_ = 10 },
             },
-            .max_entries = MAX_ENTRIES,
+            .max_entries = TEST_MAX_ENTRIES,
             .size = 2
         }
     },
@@ -122,7 +124,7 @@ static const TestCase cases[] = {
             .entries = (CfgEntry[]){
                 { .key = "a", .type = CFG_TYPE_BOOL, .val.bool_ = true }
             },
-            .max_entries = MAX_ENTRIES,
+            .max_entries = TEST_MAX_ENTRIES,
             .size = 1
         }
     },
@@ -134,7 +136,7 @@ static const TestCase cases[] = {
             .entries = (CfgEntry[]){
                 { .key = "a", .type = CFG_TYPE_BOOL, .val.bool_ = true }
             },
-            .max_entries = MAX_ENTRIES,
+            .max_entries = TEST_MAX_ENTRIES,
             .size = 1
         }
     },
@@ -146,7 +148,7 @@ static const TestCase cases[] = {
             .entries = (CfgEntry[]){
                 { .key = "a", .type = CFG_TYPE_BOOL, .val.bool_ = true }
             },
-            .max_entries = MAX_ENTRIES,
+            .max_entries = TEST_MAX_ENTRIES,
             .size = 1
         }
     },
@@ -157,7 +159,7 @@ static const TestCase cases[] = {
     //     .src = "",
     //     .exp.cfg = {
     //         .entries = {0},
-    //         .max_entries = MAX_ENTRIES,
+    //         .max_entries = TEST_MAX_ENTRIES,
     //         .size = 1
     //     }
     // },
@@ -298,51 +300,75 @@ static const TestCase cases[] = {
 // clang-format on
 
 bool
-compare_entries(const CfgEntry *expected, const CfgEntry *actual)
+error(char *msg, const char *fmt, ...)
 {
-    if (expected->type != actual->type)
-        return false;
-
-    if (strcmp(expected->key, actual->key) != 0)
-        return false;
-
-    switch (expected->type) {
-    case CFG_TYPE_STR:
-        return !strcmp(expected->val.str, actual->val.str);
-
-    case CFG_TYPE_INT:
-        return expected->val.int_ == actual->val.int_;
-
-    case CFG_TYPE_FLOAT:
-        return expected->val.float_ == actual->val.float_;
-
-    case CFG_TYPE_BOOL:
-        return expected->val.bool_ == actual->val.bool_;
-
-    case CFG_TYPE_COLOR:
-        return !memcmp(&expected->val.color, &actual->val.color, sizeof(CfgColor));
-
-    default:
-        return false;
-    }
-
+    va_list vargs;
+    va_start(vargs, fmt);
+    vsnprintf(msg, TEST_MAX_MSG, fmt, vargs);
+    va_end(vargs);
     return false;
 }
 
 bool
-compare_configs(const Cfg expected, const Cfg actual)
+compare_entries(const CfgEntry *expected, const CfgEntry *actual, char *msg)
+{
+    if (expected->type != actual->type) {
+        char *fmt = "Expected type differs from actual type in entry \"%s\"";
+        return error(msg, fmt, expected->key);
+    }
+
+    if (strcmp(expected->key, actual->key) != 0) {
+        char *fmt = "Expected key differs from actual key in entry \"%s\"";
+        return error(msg, fmt, expected->key);
+    }
+
+    switch (expected->type) {
+    case CFG_TYPE_STR:
+        if (!strcmp(expected->val.str, actual->val.str))
+            return true;
+        break;
+
+    case CFG_TYPE_INT:
+        if (expected->val.int_ == actual->val.int_)
+            return true;
+        break;
+
+    case CFG_TYPE_FLOAT:
+        if (expected->val.float_ == actual->val.float_)
+            return true;
+        break;
+
+    case CFG_TYPE_BOOL:
+        if (expected->val.bool_ == actual->val.bool_)
+            return true;
+        break;
+
+    case CFG_TYPE_COLOR:
+        if (!memcmp(&expected->val.color, &actual->val.color, sizeof(CfgColor)))
+            return true;
+        break;
+
+    default:
+        fprintf(stderr, "FATAL: unknown CfgEntry type\n");
+        exit(1);
+    }
+
+    char *fmt = "Expected value differs from actual value in entry \"%s\"";
+    return error(msg, fmt, expected->key);
+}
+
+bool
+compare_configs(const Cfg expected, const Cfg actual, char *msg)
 {
     if (expected.max_entries != actual.max_entries)
-        return false;
+        return error(msg, "Expected maximum entries differs "
+                          "from actual maximum entries");
 
     if (expected.size != actual.size)
-        return false;
-
-    if (expected.entries->type != actual.entries->type)
-        return false;
+        return error(msg, "Expected size differs from actual size");
 
     for (int i = 0; i < expected.size; i++) {
-        if (!compare_entries(&expected.entries[i], &actual.entries[i]))
+        if (!compare_entries(&expected.entries[i], &actual.entries[i], msg))
             return false;
     }
 
@@ -350,17 +376,17 @@ compare_configs(const Cfg expected, const Cfg actual)
 }
 
 static void
-run_test_case(TestCase tc, int i, FILE *stream)
+run_test_case(FILE *stream, TestCase tc, int i)
 {
     Cfg cfg;
-    CfgEntry *entries = malloc(MAX_ENTRIES * sizeof(CfgEntry));
+    CfgEntry *entries = malloc(TEST_MAX_ENTRIES * sizeof(CfgEntry));
 
     if (entries == NULL) {
-        fprintf(stream, "FATAL: malloc() failed");
+        fprintf(stderr, "FATAL: malloc() failed\n");
         exit(1);
     }
 
-    cfg_init(&cfg, entries, MAX_ENTRIES);
+    cfg_init(&cfg, entries, TEST_MAX_ENTRIES);
 
     CfgError err;
     int res = cfg_parse(tc.src, strlen(tc.src), &cfg, &err);
@@ -371,10 +397,12 @@ run_test_case(TestCase tc, int i, FILE *stream)
             fprintf(stream, "SUCCESS CASE %d - " RED "FAILED\n" RESET, i);
             cfg_fprint_error(stream, &err);
         } else {
-            if (compare_configs(tc.exp.cfg, cfg)) {
+            char msg[TEST_MAX_MSG];
+            if (compare_configs(tc.exp.cfg, cfg, msg)) {
                 fprintf(stream, "SUCCESS CASE %d - " GREEN "PASSED\n" RESET, i);
             } else {
                 fprintf(stream, "SUCCESS CASE %d - " RED "FAILED\n" RESET, i);
+                fprintf(stream, "%s\n", msg);
             }
         }
         break;
@@ -389,7 +417,8 @@ run_test_case(TestCase tc, int i, FILE *stream)
         break;
 
     default:
-        fprintf(stream, "FATAL: invalid TestCase type");
+        fprintf(stderr, "FATAL: unknown TestCase type\n");
+        free(entries);
         exit(1);
     }
 
@@ -399,9 +428,9 @@ run_test_case(TestCase tc, int i, FILE *stream)
 int
 main(void)
 {
-    int len = sizeof(cases) / sizeof(cases[0]);
+    int len = sizeof(test_cases) / sizeof(test_cases[0]);
     for (int i = 0; i < len; i++) {
-        run_test_case(cases[i], i, stdout);
+        run_test_case(stdout, test_cases[i], i);
     }
 }
 
@@ -427,7 +456,3 @@ main(void)
 // alpha must be in range (0, 1)
 
 // unexpected character '%c'
-
-// ---
-
-// gcc -Wall -Wextra -g test.c config.c -o test
