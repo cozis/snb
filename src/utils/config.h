@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-// #define CFG_DETAILED_ERRORS
+#define CFG_DETAILED_ERRORS
 
 #define CFG_MAX_KEY 32
 #define CFG_MAX_VAL 64
