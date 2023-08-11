@@ -16,3 +16,4 @@ config/test
 config/test-cov
 config/test.exe
 config/test-cov.exe
+config/report/
