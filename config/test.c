@@ -5,18 +5,17 @@
 
 #include "config.h"
 
-#define COLORS
+// #define LOGFILE
 #define TEST_MAX_ENTRIES 64
-#define TEST_MAX_MSG 64
 
-#ifdef COLORS
-#define RED "\e[1;31m"
-#define GREEN "\e[1;32m"
-#define RESET "\e[0m"
-#else
+#ifdef LOGFILE
 #define RED
 #define GREEN
 #define RESET
+#else
+#define RED "\e[1;31m"
+#define GREEN "\e[1;32m"
+#define RESET "\e[0m"
 #endif
 
 typedef struct {
@@ -299,27 +298,23 @@ static const TestCase test_cases[] = {
   };
 // clang-format on
 
-bool
-error(char *msg, const char *fmt, ...)
-{
-    va_list vargs;
-    va_start(vargs, fmt);
-    vsnprintf(msg, TEST_MAX_MSG, fmt, vargs);
-    va_end(vargs);
-    return false;
-}
+static FILE *stream;
 
 bool
-compare_entries(const CfgEntry *expected, const CfgEntry *actual, char *msg)
+assert_eq_entry(const CfgEntry *expected, const CfgEntry *actual)
 {
     if (expected->type != actual->type) {
-        char *fmt = "Expected type differs from actual type in entry \"%s\"";
-        return error(msg, fmt, expected->key);
+        char *fmt = "Type mismatch in entry \"%s\" between "
+                    " [expected] and [actual]\n";
+        fprintf(stream, fmt, expected->key);
+        return false;
     }
 
     if (strcmp(expected->key, actual->key) != 0) {
-        char *fmt = "Expected key differs from actual key in entry \"%s\"";
-        return error(msg, fmt, expected->key);
+        char *fmt = "Key mismatch in entry \"%s\" between "
+                    "[expected] and [actual]\n";
+        fprintf(stream, fmt, expected->key);
+        return false;
     }
 
     switch (expected->type) {
@@ -353,22 +348,28 @@ compare_entries(const CfgEntry *expected, const CfgEntry *actual, char *msg)
         exit(1);
     }
 
-    char *fmt = "Expected value differs from actual value in entry \"%s\"";
-    return error(msg, fmt, expected->key);
+    char *fmt = "Value mismatch in entry \"%s\" between "
+                "[expected] and [actual].\n";
+    fprintf(stream, fmt, expected->key);
+    return false;
 }
 
 bool
-compare_configs(const Cfg expected, const Cfg actual, char *msg)
+assert_eq_cfg(const Cfg expected, const Cfg actual)
 {
-    if (expected.max_entries != actual.max_entries)
-        return error(msg, "Expected maximum entries differs "
-                          "from actual maximum entries");
+    if (expected.max_entries != actual.max_entries) {
+        char *fmt = "Expected maximum entries differs from actual maximum entries\n";
+        fprintf(stream, fmt);
+        return false;
+    }
 
-    if (expected.size != actual.size)
-        return error(msg, "Expected size differs from actual size");
+    if (expected.size != actual.size) {
+        fprintf(stream, "Expected size differs from actual size\n");
+        return false;
+    }
 
     for (int i = 0; i < expected.size; i++) {
-        if (!compare_entries(&expected.entries[i], &actual.entries[i], msg))
+        if (!assert_eq_entry(&expected.entries[i], &actual.entries[i]))
             return false;
     }
 
@@ -397,12 +398,11 @@ run_test_case(FILE *stream, TestCase tc, int i)
             fprintf(stream, "SUCCESS CASE %d - " RED "FAILED\n" RESET, i);
             cfg_fprint_error(stream, &err);
         } else {
-            char msg[TEST_MAX_MSG];
-            if (compare_configs(tc.exp.cfg, cfg, msg)) {
+            if (assert_eq_cfg(tc.exp.cfg, cfg)) {
                 fprintf(stream, "SUCCESS CASE %d - " GREEN "PASSED\n" RESET, i);
             } else {
                 fprintf(stream, "SUCCESS CASE %d - " RED "FAILED\n" RESET, i);
-                fprintf(stream, "%s\n", msg);
+                fprintf(stream, "%s\n");
             }
         }
         break;
@@ -428,10 +428,24 @@ run_test_case(FILE *stream, TestCase tc, int i)
 int
 main(void)
 {
+#ifdef LOGFILE
+    stream = fopen("log.txt", "w");
+    if (!stream) {
+        fprintf(stderr, "FATAL: Failed to open log file\n");
+        exit(1);
+    }
+#else
+    stream = stdout;
+#endif
+
     int len = sizeof(test_cases) / sizeof(test_cases[0]);
     for (int i = 0; i < len; i++) {
         run_test_case(stdout, test_cases[i], i);
     }
+
+#ifdef LOGFILE
+    fclose(stream);
+#endif
 }
 
 // Error list:

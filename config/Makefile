@@ -16,4 +16,4 @@ fuzz: fuzz.c config.c config.h
 	clang -O1 -g -fsanitize=fuzzer,address,undefined fuzz.c config.c -o $@
 
 clean:
-	rm example test fuzz
+	rm example test fuzz log.txt

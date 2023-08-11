@@ -2,6 +2,7 @@ snb
 snb.exe
 
 .clang-format
+.vscode/
 
 snb-dialog
 snb-dialog.exe
