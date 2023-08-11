@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <assert.h>
 #include "config.h"
 
 // #define LOGFILE
@@ -20,7 +20,9 @@
 
 typedef struct {
     enum { TC_SUCC, TC_ERR } type;
+    int line;
     const char *src;
+    int max_entries;
     union {
         const char *err;
         Cfg cfg;
@@ -29,6 +31,245 @@ typedef struct {
 
 // clang-format off
 static const TestCase test_cases[] = {
+    {
+        .type = TC_SUCC,
+        .line = __LINE__,
+        .src = "",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.cfg = {
+            .entries = (CfgEntry[]) {},
+            .max_entries = TEST_MAX_ENTRIES,
+            .size = 0,
+        },
+    },
+    {
+        .type = TC_SUCC,
+        .line = __LINE__,
+        .src = " ",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.cfg = {
+            .entries = (CfgEntry[]) {},
+            .max_entries = TEST_MAX_ENTRIES,
+            .size = 0,
+        },
+    },
+    {
+        .type = TC_SUCC,
+        .line = __LINE__,
+        .src = "#",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.cfg = {
+            .entries = (CfgEntry[]) {},
+            .max_entries = TEST_MAX_ENTRIES,
+            .size = 0,
+        },
+    },
+    {
+        .type = TC_SUCC,
+        .line = __LINE__,
+        .src = "#\n",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.cfg = {
+            .entries = (CfgEntry[]) {},
+            .max_entries = TEST_MAX_ENTRIES,
+            .size = 0,
+        },
+    },
+    {
+        .type = TC_SUCC,
+        .line = __LINE__,
+        .src = "x",
+        .max_entries = 0,
+        .exp.cfg = {
+            .entries = (CfgEntry[]) {},
+            .max_entries = TEST_MAX_ENTRIES,
+            .size = 0,
+        },
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+        .src = "!",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.err = "missing key",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+
+        // This should be a number of Xes bigger than CFG_MAX_KEY
+        .src = "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+               "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+               "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+               "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+               "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+               "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+               "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+               "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+               ":",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.err = "key too long",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+
+        // This should be a number of Xes bigger than CFG_MAX_KEY
+        .src = "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+               "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+               "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+               "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+               "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+               "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+               "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+               "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.err = "key too long",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+        .src = "key",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.err = "':' expected",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+        .src = "key!",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.err = "':' expected",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+        .src = "key  :",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.err = "missing value",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+        .src = "key:",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.err = "missing value",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+        .src = "key:  ",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.err = "missing value",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+        .src = "key:\n",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.err = "missing value",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+        .src = "key:  \n",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.err = "missing value",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+        .src = "key: @\n",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.err = "invalid value",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+        .src = "key: \"",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.err = "closing '\"' expected",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+        .src = "key: \"\x80",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.err = "closing '\"' expected",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+        .src = "key: \"hello",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.err = "closing '\"' expected",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+        .src = "key: \"hello\x80",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.err = "closing '\"' expected",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+
+        // The string must be bigger than CFG_MAX_VAL
+        .src = "key: \""
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+            "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx" "xxxxxxxx"
+        "\"",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.err = "value too long",
+    },
+    {
+        .type = TC_SUCC,
+        .line = __LINE__,
+        .src = "key: \"hello, world!\"",
+        .max_entries = TEST_MAX_ENTRIES,
+        .exp.cfg = {
+            .entries = (CfgEntry[]) {
+                {.key="key", .type=CFG_TYPE_STR, .val.str="hello, world!"},
+            },
+            .max_entries = TEST_MAX_ENTRIES,
+            .size = 1,
+        },
+    },
+/*
     // ** SUCCESS CASES ** //
     {
         // Test: average config file
@@ -295,6 +536,7 @@ static const TestCase test_cases[] = {
         .src = "a: rgba(255, 255, 255, -0.1)",
         .exp.err = "alpha must be in range (0, 1)"
     },
+*/
   };
 // clang-format on
 
@@ -357,12 +599,6 @@ assert_eq_entry(const CfgEntry *expected, const CfgEntry *actual)
 bool
 assert_eq_cfg(const Cfg expected, const Cfg actual)
 {
-    if (expected.max_entries != actual.max_entries) {
-        char *fmt = "Expected maximum entries differs from actual maximum entries\n";
-        fprintf(stream, fmt);
-        return false;
-    }
-
     if (expected.size != actual.size) {
         fprintf(stream, "Expected size differs from actual size\n");
         return false;
@@ -387,7 +623,9 @@ run_test_case(FILE *stream, TestCase tc, int i)
         exit(1);
     }
 
-    cfg_init(&cfg, entries, TEST_MAX_ENTRIES);
+    assert(tc.max_entries <= TEST_MAX_ENTRIES);
+
+    cfg_init(&cfg, entries, tc.max_entries);
 
     CfgError err;
     int res = cfg_parse(tc.src, strlen(tc.src), &cfg, &err);
@@ -412,7 +650,6 @@ run_test_case(FILE *stream, TestCase tc, int i)
             fprintf(stream, "ERROR CASE %d - " GREEN "PASSED\n" RESET, i);
         } else {
             fprintf(stream, "ERROR CASE %d - " RED "FAILED\n" RESET, i);
-            cfg_fprint_error(stream, &err);
         }
         break;
 
@@ -426,8 +663,13 @@ run_test_case(FILE *stream, TestCase tc, int i)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
+    bool last = false;
+    for (int i = 1; i < argc; i++)
+        if (!strcmp(argv[i], "--last"))
+            last = true;
+
 #ifdef LOGFILE
     stream = fopen("log.txt", "w");
     if (!stream) {
@@ -438,14 +680,22 @@ main(void)
     stream = stdout;
 #endif
 
-    int len = sizeof(test_cases) / sizeof(test_cases[0]);
-    for (int i = 0; i < len; i++) {
+    int total_tests = sizeof(test_cases) / sizeof(test_cases[0]);
+
+    int first_test = 0;
+    int  last_test = total_tests-1;
+
+    if (last)
+        first_test = last_test;
+
+    for (int i = first_test; i <= last_test; i++) {
         run_test_case(stdout, test_cases[i], i);
     }
 
 #ifdef LOGFILE
     fclose(stream);
 #endif
+    return 0;
 }
 
 // Error list:

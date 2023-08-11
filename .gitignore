@@ -8,3 +8,11 @@ snb-dialog
 snb-dialog.exe
 
 cache
+
+config/*.info
+config/*.gcno
+config/*.gcda
+config/test
+config/test-cov
+config/test.exe
+config/test-cov.exe
