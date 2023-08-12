@@ -1,13 +1,13 @@
 CC=gcc
-CFLAGS=-Wall -Wextra -Wpedantic -g
-# CFLAGS=-Wall -Wextra -Wpedantic -DNDEBUG -O2
+CFLAGS=-Wall -Wextra -g
+# CFLAGS=-Wall -Wextra -DNDEBUG -O2
 
 .PHONY: all clean
 
 all: example
 
 example: example.c config.c config.h
-	$(CC) example.c config.c -o $@ $(CFLAGS)
+	$(CC) example.c config.c -o $@ $(CFLAGS) -Wpedantic
 
 test: test.c config.c config.h
 	$(CC) test.c config.c -o $@ $(CFLAGS)
@@ -25,4 +25,4 @@ report: clean test-cov
 	genhtml coverage.info --output-directory report --branch-coverage
 
 clean:
-	rm -f example test fuzz log.txt test-cov-*.gcda test-cov-*.gcno
+	rm -f example test fuzz test-cov log.txt test-cov-*.gcda test-cov-*.gcno coverage.info

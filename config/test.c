@@ -405,6 +405,20 @@ static const TestCase test_cases[] = {
         .max_entries = TEST_MAX_ENTRIES,
         .err = "number expected",
     },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+        .src = "key: rgba(255 x",
+        .max_entries = TEST_MAX_ENTRIES,
+        .err = "',' expected",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+        .src = "key: rgba(255, 255, 255, 1 x",
+        .max_entries = TEST_MAX_ENTRIES,
+        .err = "')' expected",
+    },
 };
 
 static FILE *stream;
@@ -504,39 +518,46 @@ run_test_case(TestCase tc)
     switch (tc.type) {
     case TC_SUCC:
         if (res != 0) {
+            // SUCCESS CASE - FAILED (failed parsing)
             cfg_fprint_error(stream, &err);
             log_result(tc, true);
             scoreboard.failed++;
         } else {
             if (tc.size != cfg.size) {
+                // SUCCESS CASE - FAILED (entries size mismatch)
                 fprintf(stream, "Size mismatch between [expected] and [actual]\n");
                 log_result(tc, true);
                 scoreboard.failed++;
-            } else if (assert_eq_entries(tc, cfg.entries)) {
-                log_result(tc, false);
-                scoreboard.passed++;
-            } else {
+            } else if (!assert_eq_entries(tc, cfg.entries)) {
+                // SUCCESS CASE - FAILED (entries mismatch)
                 log_result(tc, true);
                 scoreboard.failed++;
+            } else {
+                // SUCCESS CASE - PASSED
+                log_result(tc, false);
+                scoreboard.passed++;
             }
         }
         break;
 
     case TC_ERR:
-        if (res != 0) {
-            if (!strcmp(tc.err, err.msg)) {
-                log_result(tc, false);
-                scoreboard.passed++;
-            } else {
-                fprintf(stream,
-                        "Error message mismatch between [expected] and [actual]\n");
-                log_result(tc, false);
-                scoreboard.failed++;
-            }
-        } else {
+        if (res == 0) {
+            // ERROR CASE - FAILED (successful parsing)
             fprintf(stream, "Error case was parsed successfully\n");
             log_result(tc, true);
             scoreboard.failed++;
+        } else {
+            if (strcmp(tc.err, err.msg) != 0) {
+                // ERROR CASE - FAILED (error message mismatch)
+                fprintf(stream, "Error message mismatch between "
+                                "[expected] and [actual]\n");
+                log_result(tc, false);
+                scoreboard.failed++;
+            } else {
+                // ERROR CASE - PASSED
+                log_result(tc, false);
+                scoreboard.passed++;
+            }
         }
         break;
     }
