@@ -505,7 +505,7 @@ parse_key(CfgEntry *entry, CfgError *err)
 }
 
 static int
-consume_column(CfgError *err)
+consume_colon(CfgError *err)
 {
     // Skip blank space between the key and ':'
     skip_blank();
@@ -524,7 +524,7 @@ parse_entry(CfgEntry *entry, CfgError *err)
     if (parse_key(entry, err) != 0)
         return -1;
 
-    if (consume_column(err) != 0)
+    if (consume_colon(err) != 0)
         return -1;
 
     if (parse_value(entry, err) != 0)
