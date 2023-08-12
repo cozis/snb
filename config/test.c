@@ -179,6 +179,29 @@ static const TestCase test_cases[] = {
         .size = 1,
     },
     {
+        .type = TC_SUCC,
+        .line = __LINE__,
+        .src = "a: true\nb:true",
+        .max_entries = TEST_MAX_ENTRIES,
+        .entries =
+            (CfgEntry[]){
+                {.key = "a", .type = CFG_TYPE_BOOL, .val.bool_ = true},
+                {.key = "b", .type = CFG_TYPE_BOOL, .val.bool_ = true},
+            },
+        .size = 2,
+    },
+    {
+        .type = TC_SUCC,
+        .line = __LINE__,
+        .src = "key: 1.",
+        .max_entries = TEST_MAX_ENTRIES,
+        .entries =
+            (CfgEntry[]){
+                {.key = "key", .type = CFG_TYPE_FLOAT, .val.float_ = 1.0},
+            },
+        .size = 1,
+    },
+    {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "!",
@@ -338,6 +361,13 @@ static const TestCase test_cases[] = {
     {
         .type = TC_ERR,
         .line = __LINE__,
+        .src = "key: rgba x",
+        .max_entries = TEST_MAX_ENTRIES,
+        .err = "'(' expected",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
         .src = "key: r",
         .max_entries = TEST_MAX_ENTRIES,
         .err = "invalid literal",
@@ -424,7 +454,7 @@ static const TestCase test_cases[] = {
 static FILE *stream;
 static Scoreboard scoreboard;
 
-bool
+static bool
 assert_eq_entry(const CfgEntry *expected, const CfgEntry *actual)
 {
     if (expected->type != actual->type) {
@@ -478,7 +508,7 @@ assert_eq_entry(const CfgEntry *expected, const CfgEntry *actual)
     return false;
 }
 
-bool
+static bool
 assert_eq_entries(const TestCase expected, const CfgEntry *actual_entries)
 {
     for (int i = 0; i < expected.size; i++) {
@@ -489,7 +519,7 @@ assert_eq_entries(const TestCase expected, const CfgEntry *actual_entries)
     return true;
 }
 
-void
+static void
 log_result(TestCase tc, bool failed)
 {
     char *prefix = tc.type ? "ERROR   CASE" : "SUCCESS CASE";
@@ -563,6 +593,39 @@ run_test_case(TestCase tc)
     }
 }
 
+static void
+run_load_test(const char *filename, int expected_res, const char *expected_msg)
+{
+    Cfg cfg;
+    CfgEntry entries[TEST_MAX_ENTRIES];
+
+    cfg_init(&cfg, entries, TEST_MAX_ENTRIES);
+
+    CfgError err;
+    int res = cfg_load(filename, &cfg, &err);
+
+    // if (expected_res != res) {
+    if (res != 0) {
+        if (strcmp(expected_msg, err.msg) != 0) {
+            // ERROR CASE - FAILED (Error message mismatch)
+            cfg_fprint_error(stderr, &err);
+            fprintf(stream, "ERROR   CASE - " RED "FAILED " RESET "(%s:%d)\n",
+                    __FILE__, __LINE__);
+            scoreboard.failed++;
+        } else {
+            // ERROR CASE - PASSED
+            fprintf(stream, "ERROR   CASE - " GREEN "PASSED " RESET "(%s:%d)\n",
+                    __FILE__, __LINE__);
+            scoreboard.passed++;
+        }
+    } else {
+        // SUCCESS CASE - PASSED
+        fprintf(stream, "SUCCESS CASE - " GREEN "PASSED " RESET "(%s:%d)\n",
+                __FILE__, __LINE__);
+        scoreboard.passed++;
+    }
+}
+
 int
 main(void)
 {
@@ -580,6 +643,12 @@ main(void)
     for (int i = 0; i < scoreboard.total; i++) {
         run_test_case(test_cases[i]);
     }
+
+    scoreboard.total += 3;
+
+    run_load_test("sample.cfg", 0, "");
+    run_load_test("sample.c", -1, "invalid file extension");
+    run_load_test("sample2.cfg", -1, "failed to open the file");
 
     fprintf(stream, "Total: %d Passed: %d Failed: %d\n", scoreboard.total,
             scoreboard.passed, scoreboard.failed);
