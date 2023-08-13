@@ -23,10 +23,10 @@ typedef struct {
     int line;
     const char *src;
     int max_entries;
-    // TC_SUCC
+    // TC_SUCC (Parsing)
     CfgEntry *entries;  // Expected entries
     int size;           // Expected size of [entries]
-    // TC_ERR
+    // TC_ERR (Parsing/Loading)
     const char *err;  // Expected error message
 } TestCase;
 
@@ -36,7 +36,7 @@ typedef struct {
     int failed;
 } Scoreboard;
 
-static const TestCase test_cases[] = {
+static const TestCase parsing_test_cases[] = {
     {
         .type = TC_SUCC,
         .line = __LINE__,
@@ -451,8 +451,36 @@ static const TestCase test_cases[] = {
     },
 };
 
+static const TestCase loading_test_cases[] = {
+    {
+        .type = TC_SUCC,
+        .line = __LINE__,
+        .src = "sample.cfg",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+        .src = "sample.c",
+        .err = "invalid file extension",
+    },
+    {
+        .type = TC_ERR,
+        .line = __LINE__,
+        .src = "sample2.cfg",
+        .err = "failed to open the file",
+    },
+};
+
 static FILE *stream;
 static Scoreboard scoreboard;
+
+static void
+reset_scoreboard()
+{
+    scoreboard.total = 0;
+    scoreboard.passed = 0;
+    scoreboard.failed = 0;
+}
 
 static bool
 assert_eq_entry(const CfgEntry *expected, const CfgEntry *actual)
@@ -534,7 +562,7 @@ log_result(TestCase tc, bool failed)
 }
 
 static void
-run_test_case(TestCase tc)
+run_parsing_test_case(TestCase tc)
 {
     Cfg cfg;
     CfgEntry entries[TEST_MAX_ENTRIES];
@@ -594,7 +622,7 @@ run_test_case(TestCase tc)
 }
 
 static void
-run_load_test(const char *filename, int expected_res, const char *expected_msg)
+run_loading_test_case(TestCase tc)
 {
     Cfg cfg;
     CfgEntry entries[TEST_MAX_ENTRIES];
@@ -602,27 +630,43 @@ run_load_test(const char *filename, int expected_res, const char *expected_msg)
     cfg_init(&cfg, entries, TEST_MAX_ENTRIES);
 
     CfgError err;
-    int res = cfg_load(filename, &cfg, &err);
+    int res = cfg_load(tc.src, &cfg, &err);
 
-    // if (expected_res != res) {
-    if (res != 0) {
-        if (strcmp(expected_msg, err.msg) != 0) {
-            // ERROR CASE - FAILED (Error message mismatch)
-            cfg_fprint_error(stderr, &err);
-            fprintf(stream, "ERROR   CASE - " RED "FAILED " RESET "(%s:%d)\n",
-                    __FILE__, __LINE__);
+    switch (tc.type) {
+    case TC_SUCC:
+        if (res != 0) {
+            // SUCCESS CASE - FAILED
+            cfg_fprint_error(stream, &err);
+            log_result(tc, true);
             scoreboard.failed++;
         } else {
-            // ERROR CASE - PASSED
-            fprintf(stream, "ERROR   CASE - " GREEN "PASSED " RESET "(%s:%d)\n",
-                    __FILE__, __LINE__);
+            // SUCCESS CASE - PASSED
+            log_result(tc, false);
             scoreboard.passed++;
         }
-    } else {
-        // SUCCESS CASE - PASSED
-        fprintf(stream, "SUCCESS CASE - " GREEN "PASSED " RESET "(%s:%d)\n",
-                __FILE__, __LINE__);
-        scoreboard.passed++;
+        break;
+
+    case TC_ERR:
+        if (res == 0) {
+            // ERROR CASE - FAILED (successful parsing)
+            fprintf(stream, "Error case was parsed successfully\n");
+            log_result(tc, true);
+            scoreboard.failed++;
+        } else {
+            if (strcmp(tc.err, err.msg) != 0) {
+                // ERROR CASE - FAILED (error message mismatch)
+                cfg_fprint_error(stderr, &err);
+                fprintf(stream, "ERROR   CASE - " RED "FAILED " RESET "(%s:%d)\n",
+                        __FILE__, __LINE__);
+                scoreboard.failed++;
+            } else {
+                // ERROR CASE - PASSED
+                fprintf(stream, "ERROR   CASE - " GREEN "PASSED " RESET "(%s:%d)\n",
+                        __FILE__, __LINE__);
+                scoreboard.passed++;
+            }
+        }
+        break;
     }
 }
 
@@ -639,16 +683,21 @@ main(void)
     stream = stdout;
 #endif
 
-    scoreboard.total = sizeof(test_cases) / sizeof(test_cases[0]);
-    for (int i = 0; i < scoreboard.total; i++) {
-        run_test_case(test_cases[i]);
+    reset_scoreboard();
+
+    fprintf(stdout, "PARSING:\n");
+    int num_parsing_tcs = sizeof(parsing_test_cases) / sizeof(parsing_test_cases[0]);
+    scoreboard.total += num_parsing_tcs;
+    for (int i = 0; i < num_parsing_tcs; i++) {
+        run_parsing_test_case(parsing_test_cases[i]);
     }
 
-    scoreboard.total += 3;
-
-    run_load_test("sample.cfg", 0, "");
-    run_load_test("sample.c", -1, "invalid file extension");
-    run_load_test("sample2.cfg", -1, "failed to open the file");
+    fprintf(stdout, "LOADING:\n");
+    int num_loading_tcs = sizeof(loading_test_cases) / sizeof(loading_test_cases[0]);
+    scoreboard.total += num_loading_tcs;
+    for (int i = 0; i < num_loading_tcs; i++) {
+        run_loading_test_case(loading_test_cases[i]);
+    }
 
     fprintf(stream, "Total: %d Passed: %d Failed: %d\n", scoreboard.total,
             scoreboard.passed, scoreboard.failed);
