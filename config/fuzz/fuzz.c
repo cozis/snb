@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "config.h"
+#include "../config.h"
 
 int
 LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
@@ -21,3 +21,6 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     free(entries);
     return 0;
 }
+
+// Run: ./fzz
+//      ./fzz ./fuzz/corpus/

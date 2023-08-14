@@ -1,22 +1,23 @@
 CC=gcc
 CFLAGS=-Wall -Wextra -g
 # CFLAGS=-Wall -Wextra -DNDEBUG -O2
+TST_SRC=test/test.c test/test_parse.c test/test_load.c test/test_get.c test/test_print.c
 
-.PHONY: all clean
+.PHONY: all report clean
 
 all: example
 
 example: example.c config.c config.h
 	$(CC) example.c config.c -o $@ $(CFLAGS) -Wpedantic
 
-test: test.c config.c config.h
-	$(CC) test.c config.c -o $@ $(CFLAGS)
+fzz: fuzz/fuzz.c config.c config.h
+	clang -O1 -g -fsanitize=fuzzer,address,undefined fuzz/fuzz.c config.c -o $@
 
-fuzz: fuzz.c config.c config.h
-	clang -O1 -g -fsanitize=fuzzer,address,undefined fuzz.c config.c -o $@
+tst: $(TST_SRC) config.c config.h
+	$(CC) $(TST_SRC) config.c -o $@ $(CFLAGS)
 
-test-cov: test.c config.c config.h
-	$(CC) test.c config.c -o $@ $(CFLAGS) -fprofile-arcs -ftest-coverage -DNDEBUG
+test-cov: $(TST_SRC) config.c config.h
+	$(CC) $(TST_SRC) config.c -o $@ $(CFLAGS) -fprofile-arcs -ftest-coverage -DNDEBUG
 
 report: clean test-cov
 	./test-cov
@@ -25,4 +26,9 @@ report: clean test-cov
 	genhtml coverage.info --output-directory report --branch-coverage
 
 clean:
-	rm -f example test fuzz test-cov log.txt test-cov-*.gcda test-cov-*.gcno coverage.info
+	rm -rf example fzz tst test-cov \
+	       test-cov-*.gcda test-cov-*.gcno coverage.info \
+		   report/
+
+	find ./fuzz/corpus -type f ! -name '*.cfg' -delete
+
