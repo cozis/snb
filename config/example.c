@@ -12,16 +12,16 @@ main(int argc, char *argv[])
         return 1;
     }
 
-    int max_entries = 64;
+    int capacity = 64;
     Cfg cfg;
-    CfgEntry *entries = malloc(max_entries * sizeof(CfgEntry));
+    CfgEntry *entries = malloc(capacity * sizeof(CfgEntry));
 
     if (entries == NULL) {
         fprintf(stderr, "Error: memory allocation failed\n");
         return 1;
     }
 
-    cfg_init(&cfg, entries, max_entries);
+    cfg_init(&cfg, entries, capacity);
 
     CfgError err;
     int res = cfg_load(argv[1], &cfg, &err);
@@ -32,25 +32,25 @@ main(int argc, char *argv[])
         return 1;
     }
 
-    // char *font = cfg_get_str(cfg, "font", "Noto Sans Mono");
-    // int font_size = cfg_get_int(cfg, "font.size", 12);
-    // float zoom = cfg_get_float(cfg, "zoom", 1.0);
-    // bool line_num = cfg_get_bool(cfg, "lineNumbers", true);
-    // CfgColor bg = cfg_get_color(cfg, "bg.color",
-    //                             (CfgColor){
-    //                                 .r = 255,
-    //                                 .g = 255,
-    //                                 .b = 255,
-    //                                 .a = 1,
-    //                             });
+    char *font = cfg_get_str(cfg, "font", "Noto Sans Mono");
+    int font_size = cfg_get_int(cfg, "font.size", 12);
+    float zoom = cfg_get_float(cfg, "zoom", 1.0);
+    bool line_num = cfg_get_bool(cfg, "lineNumbers", true);
+    CfgColor bg = cfg_get_color(cfg, "bg.color",
+                                (CfgColor){
+                                    .r = 255,
+                                    .g = 255,
+                                    .b = 255,
+                                    .a = 1,
+                                });
 
-    // fprintf(stdout, "font: %s\n", font);
-    // fprintf(stdout, "font.size: %d\n", font_size);
-    // fprintf(stdout, "zoom: %f\n", zoom);
-    // fprintf(stdout, "lineNumbers: %s\n", line_num ? "true" : "false");
-    // fprintf(stdout, "bg.color: rgba(%d, %d, %d, %d)\n", bg.r, bg.g, bg.b, bg.a);
+    fprintf(stdout, "font: %s\n", font);
+    fprintf(stdout, "font.size: %d\n", font_size);
+    fprintf(stdout, "zoom: %f\n", zoom);
+    fprintf(stdout, "lineNumbers: %s\n", line_num ? "true" : "false");
+    fprintf(stdout, "bg.color: rgba(%d, %d, %d, %d)\n", bg.r, bg.g, bg.b, bg.a);
 
-    cfg_fprint(stdout, cfg);
+    // cfg_fprint(stdout, cfg);
 
     free(entries);
     return 0;
