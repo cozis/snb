@@ -2,6 +2,8 @@
 
 A parser for a simple configuration file format.
 
+To use this library you just need to add `config.c` and `config.h` to your project.
+
 ## Example
 
 ```
