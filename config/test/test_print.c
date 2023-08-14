@@ -9,6 +9,33 @@
 static FILE *stream;
 
 void
+log_result(int line, bool failed)
+{
+    if (failed)
+        fprintf(stream, "SUCCESS CASE - " RED "FAILED " RESET "(%s:%d)\n", __FILE__,
+                line);
+    else
+        fprintf(stream, "SUCCESS CASE - " GREEN "PASSED " RESET "(%s:%d)\n",
+                __FILE__, line);
+}
+
+bool
+assert_eq_prints(const char *expected, CfgError *err)
+{
+    char buffer[256];
+    FILE *tmp = fmemopen(buffer, sizeof(buffer), "w");
+    if (tmp == NULL) {
+        fprintf(stream, "FATAL: fmemopen() failed");
+        return false;
+    }
+
+    cfg_fprint_error(tmp, err);
+    fclose(tmp);
+
+    return !strncmp(buffer, expected, strlen(expected));
+}
+
+void
 run_print_err_test_1(Scoreboard *scoreboard)
 {
     Cfg cfg;
@@ -17,30 +44,16 @@ run_print_err_test_1(Scoreboard *scoreboard)
     cfg_init(&cfg, entries, TEST_CAPACITY);
 
     CfgError err;
-    int res = cfg_load("", &cfg, &err);
-
-    char expected[] = "Error: invalid filename\n";
-
-    char buffer[256];
-    FILE *tmp = fmemopen(buffer, sizeof(buffer), "w");
-    if (tmp == NULL) {
-        fprintf(stream, "FATAL: fmemopen() failed");
-        return;
-    }
-
-    cfg_fprint_error(tmp, &err);
-    fclose(tmp);
+    cfg_load("", &cfg, &err);
 
     scoreboard->total++;
 
-    if (strncmp(buffer, expected, strlen(expected)) != 0) {
+    if (!assert_eq_prints("Error: invalid filename\n", &err)) {
         cfg_fprint_error(stream, &err);
-        fprintf(stream, "SUCCESS CASE - " RED "FAILED " RESET "(%s:%d)\n", __FILE__,
-                __LINE__);
+        log_result(__LINE__, true);
         scoreboard->failed++;
     } else {
-        fprintf(stream, "SUCCESS CASE - " GREEN "PASSED " RESET "(%s:%d)\n",
-                __FILE__, __LINE__);
+        log_result(__LINE__, false);
         scoreboard->passed++;
     }
 }
@@ -55,30 +68,16 @@ run_print_err_test_2(Scoreboard *scoreboard)
 
     CfgError err;
     const char *src = "a:true\nb:";
-    int res = cfg_parse(src, strlen(src), &cfg, &err);
-
-    char expected[] = "Error at 2:3 :: missing value\n";
-
-    char buffer[256];
-    FILE *tmp = fmemopen(buffer, sizeof(buffer), "w");
-    if (tmp == NULL) {
-        fprintf(stream, "FATAL: fmemopen() failed");
-        return;
-    }
-
-    cfg_fprint_error(tmp, &err);
-    fclose(tmp);
+    cfg_parse(src, strlen(src), &cfg, &err);
 
     scoreboard->total++;
 
-    if (strncmp(buffer, expected, strlen(expected)) != 0) {
+    if (!assert_eq_prints("Error at 2:3 :: missing value\n", &err)) {
         cfg_fprint_error(stream, &err);
-        fprintf(stream, "SUCCESS CASE - " RED "FAILED " RESET "(%s:%d)\n", __FILE__,
-                __LINE__);
+        log_result(__LINE__, true);
         scoreboard->failed++;
     } else {
-        fprintf(stream, "SUCCESS CASE - " GREEN "PASSED " RESET "(%s:%d)\n",
-                __FILE__, __LINE__);
+        log_result(__LINE__, false);
         scoreboard->passed++;
     }
 }
@@ -124,12 +123,10 @@ run_print_test(Scoreboard *scoreboard)
     scoreboard->total++;
 
     if (strncmp(buffer, expected, strlen(expected)) != 0) {
-        fprintf(stream, "SUCCESS CASE - " RED "FAILED " RESET "(%s:%d)\n", __FILE__,
-                __LINE__);
+        log_result(__LINE__, true);
         scoreboard->failed++;
     } else {
-        fprintf(stream, "SUCCESS CASE - " GREEN "PASSED " RESET "(%s:%d)\n",
-                __FILE__, __LINE__);
+        log_result(__LINE__, false);
         scoreboard->passed++;
     }
 }

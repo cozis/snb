@@ -10,7 +10,7 @@ typedef struct {
     int line;
     const char *filename;
     // TC_ERR
-    const char *err;  // Expected error message
+    const char *expected_error;
 } TestCase;
 
 static const TestCase test_cases[] = {
@@ -23,19 +23,19 @@ static const TestCase test_cases[] = {
         .type = TC_ERR,
         .line = __LINE__,
         .filename = "sample.txt",
-        .err = "invalid file extension",
+        .expected_error = "invalid file extension",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .filename = "",
-        .err = "invalid filename",
+        .expected_error = "invalid filename",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .filename = "sample2.cfg",
-        .err = "failed to open the file",
+        .expected_error = "failed to open the file",
     },
 };
 
@@ -87,7 +87,7 @@ run_test_case(TestCase tc, Scoreboard *scoreboard)
             log_result(tc, true);
             scoreboard->failed++;
         } else {
-            if (strcmp(tc.err, err.msg) != 0) {
+            if (strcmp(tc.expected_error, err.msg) != 0) {
                 // ERROR CASE - FAILED (error message mismatch)
                 cfg_fprint_error(stderr, &err);
                 log_result(tc, true);

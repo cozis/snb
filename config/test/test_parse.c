@@ -12,10 +12,10 @@ typedef struct {
     const char *src;
     int capacity;
     // TC_SUCC
-    CfgEntry *entries;  // Expected entries
-    int count;          // Expected count of [entries]
+    CfgEntry *expected_entries;
+    int expected_count;
     // TC_ERR
-    const char *err;  // Expected error message
+    const char *expected_error;
 } TestCase;
 
 static const TestCase test_cases[] = {
@@ -24,171 +24,171 @@ static const TestCase test_cases[] = {
         .line = __LINE__,
         .src = "",
         .capacity = TEST_CAPACITY,
-        .entries = (CfgEntry[]){},
-        .count = 0,
+        .expected_entries = (CfgEntry[]){},
+        .expected_count = 0,
     },
     {
         .type = TC_SUCC,
         .line = __LINE__,
         .src = " ",
         .capacity = TEST_CAPACITY,
-        .entries = (CfgEntry[]){},
-        .count = 0,
+        .expected_entries = (CfgEntry[]){},
+        .expected_count = 0,
     },
     {
         .type = TC_SUCC,
         .line = __LINE__,
         .src = "#",
         .capacity = TEST_CAPACITY,
-        .entries = (CfgEntry[]){},
-        .count = 0,
+        .expected_entries = (CfgEntry[]){},
+        .expected_count = 0,
     },
     {
         .type = TC_SUCC,
         .line = __LINE__,
         .src = "#\n",
         .capacity = TEST_CAPACITY,
-        .entries = (CfgEntry[]){},
-        .count = 0,
+        .expected_entries = (CfgEntry[]){},
+        .expected_count = 0,
     },
     {
         .type = TC_SUCC,
         .line = __LINE__,
         .src = "x",
         .capacity = 0,
-        .entries = (CfgEntry[]){},
-        .count = 0,
+        .expected_entries = (CfgEntry[]){},
+        .expected_count = 0,
     },
     {
         .type = TC_SUCC,
         .line = __LINE__,
         .src = "key: \"hello, world!\"",
         .capacity = TEST_CAPACITY,
-        .entries =
+        .expected_entries =
             (CfgEntry[]){
                 {.key = "key", .type = CFG_TYPE_STR, .val.str = "hello, world!"},
             },
-        .count = 1,
+        .expected_count = 1,
     },
     {
         .type = TC_SUCC,
         .line = __LINE__,
         .src = "key: 10 # Inline comment",
         .capacity = TEST_CAPACITY,
-        .entries =
+        .expected_entries =
             (CfgEntry[]){
                 {.key = "key", .type = CFG_TYPE_INT, .val.int_ = 10},
             },
-        .count = 1,
+        .expected_count = 1,
     },
     {
         .type = TC_SUCC,
         .line = __LINE__,
         .src = "key: -1",
         .capacity = TEST_CAPACITY,
-        .entries =
+        .expected_entries =
             (CfgEntry[]){
                 {.key = "key", .type = CFG_TYPE_INT, .val.int_ = -1},
             },
-        .count = 1,
+        .expected_count = 1,
     },
     {
         .type = TC_SUCC,
         .line = __LINE__,
         .src = "key: true",
         .capacity = TEST_CAPACITY,
-        .entries =
+        .expected_entries =
             (CfgEntry[]){
                 {.key = "key", .type = CFG_TYPE_BOOL, .val.bool_ = true},
             },
-        .count = 1,
+        .expected_count = 1,
     },
     {
         .type = TC_SUCC,
         .line = __LINE__,
         .src = "key: false",
         .capacity = TEST_CAPACITY,
-        .entries =
+        .expected_entries =
             (CfgEntry[]){
                 {.key = "key", .type = CFG_TYPE_BOOL, .val.bool_ = false},
             },
-        .count = 1,
+        .expected_count = 1,
     },
     {
         .type = TC_SUCC,
         .line = __LINE__,
         .src = "key: rgba(255, 255, 255, 1)",
         .capacity = TEST_CAPACITY,
-        .entries =
+        .expected_entries =
             (CfgEntry[]){
                 {.key = "key",
                  .type = CFG_TYPE_COLOR,
                  .val.color = (CfgColor){.r = 255, .g = 255, .b = 255, .a = 255}},
             },
-        .count = 1,
+        .expected_count = 1,
     },
     {
         .type = TC_SUCC,
         .line = __LINE__,
         .src = "key: 0.5",
         .capacity = TEST_CAPACITY,
-        .entries =
+        .expected_entries =
             (CfgEntry[]){
                 {.key = "key", .type = CFG_TYPE_FLOAT, .val.float_ = 0.5},
             },
-        .count = 1,
+        .expected_count = 1,
     },
     {
         .type = TC_SUCC,
         .line = __LINE__,
         .src = "key_: true",
         .capacity = TEST_CAPACITY,
-        .entries =
+        .expected_entries =
             (CfgEntry[]){
                 {.key = "key_", .type = CFG_TYPE_BOOL, .val.bool_ = true},
             },
-        .count = 1,
+        .expected_count = 1,
     },
     {
         .type = TC_SUCC,
         .line = __LINE__,
         .src = "key.: true",
         .capacity = TEST_CAPACITY,
-        .entries =
+        .expected_entries =
             (CfgEntry[]){
                 {.key = "key.", .type = CFG_TYPE_BOOL, .val.bool_ = true},
             },
-        .count = 1,
+        .expected_count = 1,
     },
     {
         .type = TC_SUCC,
         .line = __LINE__,
         .src = "a: true\nb:true",
         .capacity = TEST_CAPACITY,
-        .entries =
+        .expected_entries =
             (CfgEntry[]){
                 {.key = "a", .type = CFG_TYPE_BOOL, .val.bool_ = true},
                 {.key = "b", .type = CFG_TYPE_BOOL, .val.bool_ = true},
             },
-        .count = 2,
+        .expected_count = 2,
     },
     {
         .type = TC_SUCC,
         .line = __LINE__,
         .src = "key: 1.",
         .capacity = TEST_CAPACITY,
-        .entries =
+        .expected_entries =
             (CfgEntry[]){
                 {.key = "key", .type = CFG_TYPE_FLOAT, .val.float_ = 1.0},
             },
-        .count = 1,
+        .expected_count = 1,
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "!",
         .capacity = TEST_CAPACITY,
-        .err = "missing key",
+        .expected_error = "missing key",
     },
     {
         .type = TC_ERR,
@@ -196,91 +196,91 @@ static const TestCase test_cases[] = {
         // The key must be longer than CFG_MAX_KEY
         .src = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
         .capacity = TEST_CAPACITY,
-        .err = "key too long",
+        .expected_error = "key too long",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key",
         .capacity = TEST_CAPACITY,
-        .err = "':' expected",
+        .expected_error = "':' expected",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key!",
         .capacity = TEST_CAPACITY,
-        .err = "':' expected",
+        .expected_error = "':' expected",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key  :",
         .capacity = TEST_CAPACITY,
-        .err = "missing value",
+        .expected_error = "missing value",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key:",
         .capacity = TEST_CAPACITY,
-        .err = "missing value",
+        .expected_error = "missing value",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key:  ",
         .capacity = TEST_CAPACITY,
-        .err = "missing value",
+        .expected_error = "missing value",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key:\n",
         .capacity = TEST_CAPACITY,
-        .err = "missing value",
+        .expected_error = "missing value",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key:  \n",
         .capacity = TEST_CAPACITY,
-        .err = "missing value",
+        .expected_error = "missing value",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: @\n",
         .capacity = TEST_CAPACITY,
-        .err = "invalid value",
+        .expected_error = "invalid value",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: \"",
         .capacity = TEST_CAPACITY,
-        .err = "closing '\"' expected",
+        .expected_error = "closing '\"' expected",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: \"\x80",
         .capacity = TEST_CAPACITY,
-        .err = "closing '\"' expected",
+        .expected_error = "closing '\"' expected",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: \"hello",
         .capacity = TEST_CAPACITY,
-        .err = "closing '\"' expected",
+        .expected_error = "closing '\"' expected",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: \"hello\x80",
         .capacity = TEST_CAPACITY,
-        .err = "closing '\"' expected",
+        .expected_error = "closing '\"' expected",
     },
     {
         .type = TC_ERR,
@@ -289,147 +289,147 @@ static const TestCase test_cases[] = {
         .src = "key: \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"",
         .capacity = TEST_CAPACITY,
-        .err = "value too long",
+        .expected_error = "value too long",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: 10x",
         .capacity = TEST_CAPACITY,
-        .err = "unexpected character 'x'",
+        .expected_error = "unexpected character 'x'",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: -",
         .capacity = TEST_CAPACITY,
-        .err = "invalid value",
+        .expected_error = "invalid value",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: t",
         .capacity = TEST_CAPACITY,
-        .err = "invalid literal",
+        .expected_error = "invalid literal",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: f",
         .capacity = TEST_CAPACITY,
-        .err = "invalid literal",
+        .expected_error = "invalid literal",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: x",
         .capacity = TEST_CAPACITY,
-        .err = "invalid literal",
+        .expected_error = "invalid literal",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: rgba(",
         .capacity = TEST_CAPACITY,
-        .err = "',' expected",
+        .expected_error = "',' expected",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: rgba",
         .capacity = TEST_CAPACITY,
-        .err = "'(' expected",
+        .expected_error = "'(' expected",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: rgba x",
         .capacity = TEST_CAPACITY,
-        .err = "'(' expected",
+        .expected_error = "'(' expected",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: r",
         .capacity = TEST_CAPACITY,
-        .err = "invalid literal",
+        .expected_error = "invalid literal",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: rgba(0.5",
         .capacity = TEST_CAPACITY,
-        .err = "red, blue and green must be integers in range (0, 255)",
+        .expected_error = "red, blue and green must be integers in range (0, 255)",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: rgba(-1",
         .capacity = TEST_CAPACITY,
-        .err = "red, blue and green must be integers in range (0, 255)",
+        .expected_error = "red, blue and green must be integers in range (0, 255)",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: rgba(-1",
         .capacity = TEST_CAPACITY,
-        .err = "red, blue and green must be integers in range (0, 255)",
+        .expected_error = "red, blue and green must be integers in range (0, 255)",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: rgba(256",
         .capacity = TEST_CAPACITY,
-        .err = "red, blue and green must be integers in range (0, 255)",
+        .expected_error = "red, blue and green must be integers in range (0, 255)",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: rgba(255, 255, 255, -1)",
         .capacity = TEST_CAPACITY,
-        .err = "alpha must be in range (0, 1)",
+        .expected_error = "alpha must be in range (0, 1)",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: rgba(255, 255, 255, 2)",
         .capacity = TEST_CAPACITY,
-        .err = "alpha must be in range (0, 1)",
+        .expected_error = "alpha must be in range (0, 1)",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: rgba(255, 255, 255, 1",
         .capacity = TEST_CAPACITY,
-        .err = "')' expected",
+        .expected_error = "')' expected",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: rgba(255, 255, 255, x",
         .capacity = TEST_CAPACITY,
-        .err = "number expected",
+        .expected_error = "number expected",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: rgba(x",
         .capacity = TEST_CAPACITY,
-        .err = "number expected",
+        .expected_error = "number expected",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: rgba(255 x",
         .capacity = TEST_CAPACITY,
-        .err = "',' expected",
+        .expected_error = "',' expected",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: rgba(255, 255, 255, 1 x",
         .capacity = TEST_CAPACITY,
-        .err = "')' expected",
+        .expected_error = "')' expected",
     },
 };
 
@@ -490,13 +490,12 @@ assert_eq_entry(const CfgEntry *expected, const CfgEntry *actual)
 }
 
 static bool
-assert_eq_entries(const TestCase expected, const CfgEntry *actual_entries)
+assert_eq_entries(const TestCase tc, const CfgEntry *actual_entries)
 {
-    for (int i = 0; i < expected.count; i++) {
-        if (!assert_eq_entry(&expected.entries[i], &actual_entries[i]))
+    for (int i = 0; i < tc.expected_count; i++) {
+        if (!assert_eq_entry(&tc.expected_entries[i], &actual_entries[i]))
             return false;
     }
-
     return true;
 }
 
@@ -534,7 +533,7 @@ run_test_case(TestCase tc, Scoreboard *scoreboard)
             log_result(tc, true);
             scoreboard->failed++;
         } else {
-            if (tc.count != cfg.count) {
+            if (tc.expected_count != cfg.count) {
                 // SUCCESS CASE - FAILED (entries count mismatch)
                 fprintf(stream, "Count mismatch between [expected] and [actual]\n");
                 log_result(tc, true);
@@ -558,7 +557,7 @@ run_test_case(TestCase tc, Scoreboard *scoreboard)
             log_result(tc, true);
             scoreboard->failed++;
         } else {
-            if (strcmp(tc.err, err.msg) != 0) {
+            if (strcmp(tc.expected_error, err.msg) != 0) {
                 // ERROR CASE - FAILED (error message mismatch)
                 fprintf(stream, "Error message mismatch between "
                                 "[expected] and [actual]\n");
