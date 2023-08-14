@@ -23,7 +23,7 @@ main(void)
     run_parse_tests(&scoreboard, stream);
     run_load_tests(&scoreboard, stream);
     run_get_tests(&scoreboard, stream);
-    run_print_test(&scoreboard, stream);
+    run_print_tests(&scoreboard, stream);
 
     fprintf(stream, "Total: %d Passed: %d Failed: %d\n", scoreboard.total,
             scoreboard.passed, scoreboard.failed);

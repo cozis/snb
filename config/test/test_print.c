@@ -6,8 +6,82 @@
 #include "test.h"
 #include "test_print.h"
 
+static FILE *stream;
+
 void
-run_print_test(Scoreboard *scoreboard, FILE *stream)
+run_print_err_test_1(Scoreboard *scoreboard)
+{
+    Cfg cfg;
+    CfgEntry entries[TEST_CAPACITY];
+
+    cfg_init(&cfg, entries, TEST_CAPACITY);
+
+    CfgError err;
+    int res = cfg_load("", &cfg, &err);
+
+    char expected[] = "Error: invalid filename\n";
+
+    char buffer[256];
+    FILE *tmp = fmemopen(buffer, sizeof(buffer), "w");
+    if (tmp == NULL) {
+        fprintf(stream, "FATAL: fmemopen() failed");
+        return;
+    }
+
+    cfg_fprint_error(tmp, &err);
+    fclose(tmp);
+
+    scoreboard->total++;
+
+    if (strncmp(buffer, expected, strlen(expected)) != 0) {
+        fprintf(stream, "SUCCESS CASE - " RED "FAILED " RESET "(%s:%d)\n", __FILE__,
+                __LINE__);
+        scoreboard->failed++;
+    } else {
+        fprintf(stream, "SUCCESS CASE - " GREEN "PASSED " RESET "(%s:%d)\n",
+                __FILE__, __LINE__);
+        scoreboard->passed++;
+    }
+}
+
+void
+run_print_err_test_2(Scoreboard *scoreboard)
+{
+    Cfg cfg;
+    CfgEntry entries[TEST_CAPACITY];
+
+    cfg_init(&cfg, entries, TEST_CAPACITY);
+
+    CfgError err;
+    int res = cfg_parse(":", 1, &cfg, &err);
+
+    char expected[] = "Error at 1:1 :: missing key\n";
+
+    char buffer[256];
+    FILE *tmp = fmemopen(buffer, sizeof(buffer), "w");
+    if (tmp == NULL) {
+        fprintf(stream, "FATAL: fmemopen() failed");
+        return;
+    }
+
+    cfg_fprint_error(tmp, &err);
+    fclose(tmp);
+
+    scoreboard->total++;
+
+    if (strncmp(buffer, expected, strlen(expected)) != 0) {
+        fprintf(stream, "SUCCESS CASE - " RED "FAILED " RESET "(%s:%d)\n", __FILE__,
+                __LINE__);
+        scoreboard->failed++;
+    } else {
+        fprintf(stream, "SUCCESS CASE - " GREEN "PASSED " RESET "(%s:%d)\n",
+                __FILE__, __LINE__);
+        scoreboard->passed++;
+    }
+}
+
+void
+run_print_test(Scoreboard *scoreboard)
 {
     Cfg cfg = {
         .entries =
@@ -55,4 +129,13 @@ run_print_test(Scoreboard *scoreboard, FILE *stream)
                 __FILE__, __LINE__);
         scoreboard->passed++;
     }
+}
+
+void
+run_print_tests(Scoreboard *scoreboard, FILE *stream_)
+{
+    stream = stream_;
+    run_print_test(scoreboard);
+    run_print_err_test_1(scoreboard);
+    run_print_err_test_2(scoreboard);
 }
