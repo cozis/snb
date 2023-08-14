@@ -28,7 +28,7 @@ report: clean test-cov
 clean:
 	rm -rf example fzz tst test-cov \
 	       test-cov-*.gcda test-cov-*.gcno coverage.info \
-		   report/
+		   log.txt report/
 
 	find ./fuzz/corpus -type f ! -name '*.cfg' -delete
 

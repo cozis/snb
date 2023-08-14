@@ -1,42 +1,24 @@
 #include <assert.h>
-#include <stdarg.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "config.h"
 
-// #define LOGFILE
-#define TEST_MAX_ENTRIES 64
-
-#ifdef LOGFILE
-#define RED
-#define GREEN
-#define RESET
-#else
-#define RED "\e[1;31m"
-#define GREEN "\e[1;32m"
-#define RESET "\e[0m"
-#endif
+#include "../config.h"
+#include "test.h"
+#include "test_parse.h"
 
 typedef struct {
     enum { TC_SUCC, TC_ERR } type;
     int line;
     const char *src;
     int max_entries;
-    // TC_SUCC (Parsing)
+    // TC_SUCC
     CfgEntry *entries;  // Expected entries
     int size;           // Expected size of [entries]
-    // TC_ERR (Parsing/Loading)
+    // TC_ERR
     const char *err;  // Expected error message
 } TestCase;
 
-typedef struct {
-    int total;
-    int passed;
-    int failed;
-} Scoreboard;
-
-static const TestCase parsing_test_cases[] = {
+static const TestCase test_cases[] = {
     {
         .type = TC_SUCC,
         .line = __LINE__,
@@ -451,36 +433,7 @@ static const TestCase parsing_test_cases[] = {
     },
 };
 
-static const TestCase loading_test_cases[] = {
-    {
-        .type = TC_SUCC,
-        .line = __LINE__,
-        .src = "sample.cfg",
-    },
-    {
-        .type = TC_ERR,
-        .line = __LINE__,
-        .src = "sample.c",
-        .err = "invalid file extension",
-    },
-    {
-        .type = TC_ERR,
-        .line = __LINE__,
-        .src = "sample2.cfg",
-        .err = "failed to open the file",
-    },
-};
-
 static FILE *stream;
-static Scoreboard scoreboard;
-
-static void
-reset_scoreboard()
-{
-    scoreboard.total = 0;
-    scoreboard.passed = 0;
-    scoreboard.failed = 0;
-}
 
 static bool
 assert_eq_entry(const CfgEntry *expected, const CfgEntry *actual)
@@ -562,7 +515,7 @@ log_result(TestCase tc, bool failed)
 }
 
 static void
-run_parsing_test_case(TestCase tc)
+run_test_case(TestCase tc, Scoreboard *scoreboard)
 {
     Cfg cfg;
     CfgEntry entries[TEST_MAX_ENTRIES];
@@ -579,21 +532,21 @@ run_parsing_test_case(TestCase tc)
             // SUCCESS CASE - FAILED (failed parsing)
             cfg_fprint_error(stream, &err);
             log_result(tc, true);
-            scoreboard.failed++;
+            scoreboard->failed++;
         } else {
             if (tc.size != cfg.size) {
                 // SUCCESS CASE - FAILED (entries size mismatch)
                 fprintf(stream, "Size mismatch between [expected] and [actual]\n");
                 log_result(tc, true);
-                scoreboard.failed++;
+                scoreboard->failed++;
             } else if (!assert_eq_entries(tc, cfg.entries)) {
                 // SUCCESS CASE - FAILED (entries mismatch)
                 log_result(tc, true);
-                scoreboard.failed++;
+                scoreboard->failed++;
             } else {
                 // SUCCESS CASE - PASSED
                 log_result(tc, false);
-                scoreboard.passed++;
+                scoreboard->passed++;
             }
         }
         break;
@@ -603,130 +556,33 @@ run_parsing_test_case(TestCase tc)
             // ERROR CASE - FAILED (successful parsing)
             fprintf(stream, "Error case was parsed successfully\n");
             log_result(tc, true);
-            scoreboard.failed++;
+            scoreboard->failed++;
         } else {
             if (strcmp(tc.err, err.msg) != 0) {
                 // ERROR CASE - FAILED (error message mismatch)
                 fprintf(stream, "Error message mismatch between "
                                 "[expected] and [actual]\n");
                 log_result(tc, false);
-                scoreboard.failed++;
+                scoreboard->failed++;
             } else {
                 // ERROR CASE - PASSED
                 log_result(tc, false);
-                scoreboard.passed++;
+                scoreboard->passed++;
             }
         }
         break;
     }
 }
 
-static void
-run_loading_test_case(TestCase tc)
+void
+run_parse_tests(Scoreboard *scoreboard, FILE *stream_)
 {
-    Cfg cfg;
-    CfgEntry entries[TEST_MAX_ENTRIES];
+    stream = stream_;
 
-    cfg_init(&cfg, entries, TEST_MAX_ENTRIES);
+    int total = sizeof(test_cases) / sizeof(test_cases[0]);
+    scoreboard->total += total;
 
-    CfgError err;
-    int res = cfg_load(tc.src, &cfg, &err);
-
-    switch (tc.type) {
-    case TC_SUCC:
-        if (res != 0) {
-            // SUCCESS CASE - FAILED
-            cfg_fprint_error(stream, &err);
-            log_result(tc, true);
-            scoreboard.failed++;
-        } else {
-            // SUCCESS CASE - PASSED
-            log_result(tc, false);
-            scoreboard.passed++;
-        }
-        break;
-
-    case TC_ERR:
-        if (res == 0) {
-            // ERROR CASE - FAILED (successful parsing)
-            fprintf(stream, "Error case was parsed successfully\n");
-            log_result(tc, true);
-            scoreboard.failed++;
-        } else {
-            if (strcmp(tc.err, err.msg) != 0) {
-                // ERROR CASE - FAILED (error message mismatch)
-                cfg_fprint_error(stderr, &err);
-                fprintf(stream, "ERROR   CASE - " RED "FAILED " RESET "(%s:%d)\n",
-                        __FILE__, __LINE__);
-                scoreboard.failed++;
-            } else {
-                // ERROR CASE - PASSED
-                fprintf(stream, "ERROR   CASE - " GREEN "PASSED " RESET "(%s:%d)\n",
-                        __FILE__, __LINE__);
-                scoreboard.passed++;
-            }
-        }
-        break;
+    for (int i = 0; i < total; i++) {
+        run_test_case(test_cases[i], scoreboard);
     }
 }
-
-int
-main(void)
-{
-#ifdef LOGFILE
-    stream = fopen("log.txt", "w");
-    if (!stream) {
-        fprintf(stderr, "FATAL: Failed to open log file\n");
-        exit(1);
-    }
-#else
-    stream = stdout;
-#endif
-
-    reset_scoreboard();
-
-    fprintf(stdout, "PARSING:\n");
-    int num_parsing_tcs = sizeof(parsing_test_cases) / sizeof(parsing_test_cases[0]);
-    scoreboard.total += num_parsing_tcs;
-    for (int i = 0; i < num_parsing_tcs; i++) {
-        run_parsing_test_case(parsing_test_cases[i]);
-    }
-
-    fprintf(stdout, "LOADING:\n");
-    int num_loading_tcs = sizeof(loading_test_cases) / sizeof(loading_test_cases[0]);
-    scoreboard.total += num_loading_tcs;
-    for (int i = 0; i < num_loading_tcs; i++) {
-        run_loading_test_case(loading_test_cases[i]);
-    }
-
-    fprintf(stream, "Total: %d Passed: %d Failed: %d\n", scoreboard.total,
-            scoreboard.passed, scoreboard.failed);
-
-#ifdef LOGFILE
-    fclose(stream);
-#endif
-    return 0;
-}
-
-// Error list:
-
-// missing key
-// missing value
-
-// key too long
-// value too long
-
-// invalid value
-// invalid literal
-
-// closing '\"' expected
-// number expected
-// '(' expected
-// ')' expected
-// ',' expected
-// ':' expected
-
-// red, blue and green must be integers in range (0, 255)
-// alpha must be in range (0, 1)
-
-// unexpected character '%c'
