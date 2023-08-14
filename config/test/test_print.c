@@ -34,6 +34,7 @@ run_print_err_test_1(Scoreboard *scoreboard)
     scoreboard->total++;
 
     if (strncmp(buffer, expected, strlen(expected)) != 0) {
+        cfg_fprint_error(stream, &err);
         fprintf(stream, "SUCCESS CASE - " RED "FAILED " RESET "(%s:%d)\n", __FILE__,
                 __LINE__);
         scoreboard->failed++;
@@ -53,9 +54,10 @@ run_print_err_test_2(Scoreboard *scoreboard)
     cfg_init(&cfg, entries, TEST_CAPACITY);
 
     CfgError err;
-    int res = cfg_parse(":", 1, &cfg, &err);
+    const char *src = "a:true\nb:";
+    int res = cfg_parse(src, strlen(src), &cfg, &err);
 
-    char expected[] = "Error at 1:1 :: missing key\n";
+    char expected[] = "Error at 2:3 :: missing value\n";
 
     char buffer[256];
     FILE *tmp = fmemopen(buffer, sizeof(buffer), "w");
@@ -70,6 +72,7 @@ run_print_err_test_2(Scoreboard *scoreboard)
     scoreboard->total++;
 
     if (strncmp(buffer, expected, strlen(expected)) != 0) {
+        cfg_fprint_error(stream, &err);
         fprintf(stream, "SUCCESS CASE - " RED "FAILED " RESET "(%s:%d)\n", __FILE__,
                 __LINE__);
         scoreboard->failed++;
