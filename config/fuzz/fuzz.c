@@ -22,5 +22,4 @@ LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     return 0;
 }
 
-// Run: ./fzz
-//      ./fzz ./fuzz/corpus/
+// Docs: https://llvm.org/docs/LibFuzzer.html
