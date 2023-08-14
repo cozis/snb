@@ -611,8 +611,14 @@ cfg_load(const char *filename, Cfg *cfg, CfgError *err)
 {
     init_error(err);
 
-    char *ext = strrchr(filename, '.');
-    if (strcmp(ext, ".cfg") != 0) {
+    size_t len = strlen(filename);
+    if (len < 5) {
+        snprintf(err->msg, CFG_MAX_ERR + 1, "invalid filename");
+        return -1;
+    }
+
+    const char *ext = filename + (len - 4);
+    if (strncmp(ext, ".cfg", 4) != 0) {
         snprintf(err->msg, CFG_MAX_ERR + 1, "invalid file extension");
         return -1;
     }
