@@ -10,7 +10,7 @@
 #define RESET "\e[0m"
 #endif
 
-#define TEST_MAX_ENTRIES 64
+#define TEST_CAPACITY 64
 
 typedef struct {
     int total;

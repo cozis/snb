@@ -33,26 +33,3 @@ main(void)
 #endif
     return 0;
 }
-
-// Error list:
-
-// missing key
-// missing value
-
-// key too long
-// value too long
-
-// invalid value
-// invalid literal
-
-// closing '\"' expected
-// number expected
-// '(' expected
-// ')' expected
-// ',' expected
-// ':' expected
-
-// red, blue and green must be integers in range (0, 255)
-// alpha must be in range (0, 1)
-
-// unexpected character '%c'

@@ -22,8 +22,8 @@ run_print_test(Scoreboard *scoreboard, FILE *stream)
                  .type = CFG_TYPE_COLOR,
                  .val.color = {.r = 255, .g = 255, .b = 255, .a = 255}},
             },
-        .max_entries = TEST_MAX_ENTRIES,
-        .size = 5,
+        .capacity = TEST_CAPACITY,
+        .count = 5,
     };
 
     char expected[] = "font: \"JetBrainsMono Nerd Font\"\n"

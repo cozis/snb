@@ -59,9 +59,9 @@ static void
 run_test_case(TestCase tc, Scoreboard *scoreboard)
 {
     Cfg cfg;
-    CfgEntry entries[TEST_MAX_ENTRIES];
+    CfgEntry entries[TEST_CAPACITY];
 
-    cfg_init(&cfg, entries, TEST_MAX_ENTRIES);
+    cfg_init(&cfg, entries, TEST_CAPACITY);
 
     CfgError err;
     int res = cfg_load(tc.filename, &cfg, &err);

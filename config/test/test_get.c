@@ -20,7 +20,7 @@ static const TestCase test_cases[] = {
         .line = __LINE__,
         .cfg =
             (Cfg){
-                .max_entries = TEST_MAX_ENTRIES,
+                .capacity = TEST_CAPACITY,
                 .entries =
                     (CfgEntry[]){
                         {
@@ -29,7 +29,7 @@ static const TestCase test_cases[] = {
                             .val.str = "hello, world!",
                         },
                     },
-                .size = 1,
+                .count = 1,
             },
         .expected = {.str = "hello, world!"},
     },
@@ -38,7 +38,7 @@ static const TestCase test_cases[] = {
         .line = __LINE__,
         .cfg =
             (Cfg){
-                .max_entries = TEST_MAX_ENTRIES,
+                .capacity = TEST_CAPACITY,
                 .entries =
                     (CfgEntry[]){
                         {
@@ -47,7 +47,7 @@ static const TestCase test_cases[] = {
                             .val.bool_ = true,
                         },
                     },
-                .size = 1,
+                .count = 1,
             },
         .expected = {.bool_ = true},
     },
@@ -56,7 +56,7 @@ static const TestCase test_cases[] = {
         .line = __LINE__,
         .cfg =
             (Cfg){
-                .max_entries = TEST_MAX_ENTRIES,
+                .capacity = TEST_CAPACITY,
                 .entries =
                     (CfgEntry[]){
                         {
@@ -65,7 +65,7 @@ static const TestCase test_cases[] = {
                             .val.int_ = 10,
                         },
                     },
-                .size = 1,
+                .count = 1,
             },
         .expected = {.int_ = 10},
     },
@@ -74,7 +74,7 @@ static const TestCase test_cases[] = {
         .line = __LINE__,
         .cfg =
             (Cfg){
-                .max_entries = TEST_MAX_ENTRIES,
+                .capacity = TEST_CAPACITY,
                 .entries =
                     (CfgEntry[]){
                         {
@@ -83,7 +83,7 @@ static const TestCase test_cases[] = {
                             .val.float_ = 0.5,
                         },
                     },
-                .size = 1,
+                .count = 1,
             },
         .expected = {.float_ = 0.5},
     },
@@ -92,7 +92,7 @@ static const TestCase test_cases[] = {
         .line = __LINE__,
         .cfg =
             (Cfg){
-                .max_entries = TEST_MAX_ENTRIES,
+                .capacity = TEST_CAPACITY,
                 .entries =
                     (CfgEntry[]){
                         {
@@ -107,7 +107,7 @@ static const TestCase test_cases[] = {
                                 },
                         },
                     },
-                .size = 1,
+                .count = 1,
             },
         .expected = {.color =
                          (CfgColor){
@@ -122,9 +122,9 @@ static const TestCase test_cases[] = {
         .line = __LINE__,
         .cfg =
             (Cfg){
-                .max_entries = TEST_MAX_ENTRIES,
+                .capacity = TEST_CAPACITY,
                 .entries = (CfgEntry[]){},
-                .size = 0,
+                .count = 0,
             },
         .expected = true,
         .default_ = true,
@@ -134,7 +134,7 @@ static const TestCase test_cases[] = {
         .line = __LINE__,
         .cfg =
             (Cfg){
-                .max_entries = TEST_MAX_ENTRIES,
+                .capacity = TEST_CAPACITY,
                 .entries =
                     (CfgEntry[]){
                         {
@@ -143,7 +143,7 @@ static const TestCase test_cases[] = {
                             .val.int_ = 10,
                         },
                     },
-                .size = 1,
+                .count = 1,
             },
         .expected = true,
         .default_ = true,
@@ -153,7 +153,7 @@ static const TestCase test_cases[] = {
         .line = __LINE__,
         .cfg =
             (Cfg){
-                .max_entries = TEST_MAX_ENTRIES,
+                .capacity = TEST_CAPACITY,
                 .entries =
                     (CfgEntry[]){
                         {
@@ -162,7 +162,7 @@ static const TestCase test_cases[] = {
                             .val.int_ = 10,
                         },
                     },
-                .size = 1,
+                .count = 1,
             },
         .expected = true,
         .default_ = true,
