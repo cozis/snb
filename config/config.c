@@ -666,10 +666,64 @@ cfg_get_int(Cfg cfg, const char *key, int default_)
     return *(int *) get_val(cfg, key, &default_, CFG_TYPE_INT);
 }
 
+int
+cfg_get_int_min(Cfg cfg, const char *key, int default_, int min)
+{
+    int value = cfg_get_int(cfg, key, default_);
+    if (value < min)
+        value = default_;
+    return value;
+}
+
+int
+cfg_get_int_max(Cfg cfg, const char *key, int default_, int max)
+{
+    int value = cfg_get_int(cfg, key, default_);
+    if (value > max)
+        value = default_;
+    return value;
+}
+
+int
+cfg_get_int_range(Cfg cfg, const char *key, int default_, int min, int max)
+{
+    int value = cfg_get_int(cfg, key, default_);
+    if (value < min || value > max)
+        value = default_;
+    return value;
+}
+
 float
 cfg_get_float(Cfg cfg, const char *key, float default_)
 {
     return *(float *) get_val(cfg, key, &default_, CFG_TYPE_FLOAT);
+}
+
+float
+cfg_get_float_min(Cfg cfg, const char *key, float default_, float min)
+{
+    float value = cfg_get_float(cfg, key, default_);
+    if (value < min)
+        value = default_;
+    return value;
+}
+
+float
+cfg_get_float_max(Cfg cfg, const char *key, float default_, float max)
+{
+    float value = cfg_get_float(cfg, key, default_);
+    if (value > max)
+        value = default_;
+    return value;
+}
+
+float
+cfg_get_float_range(Cfg cfg, const char *key, float default_, float min, float max)
+{
+    float value = cfg_get_float(cfg, key, default_);
+    if (value < min || value > max)
+        value = default_;
+    return value;
 }
 
 CfgColor
