@@ -18,18 +18,20 @@ run_print_test(Scoreboard *scoreboard, FILE *stream)
                 {.key = "font.size", .type = CFG_TYPE_INT, .val.int_ = 14},
                 {.key = "zoom", .type = CFG_TYPE_FLOAT, .val.float_ = 1.5},
                 {.key = "line_numbers", .type = CFG_TYPE_BOOL, .val.bool_ = true},
+                {.key = "ruler", .type = CFG_TYPE_BOOL, .val.bool_ = false},
                 {.key = "bg.color",
                  .type = CFG_TYPE_COLOR,
                  .val.color = {.r = 255, .g = 255, .b = 255, .a = 255}},
             },
         .capacity = TEST_CAPACITY,
-        .count = 5,
+        .count = 6,
     };
 
     char expected[] = "font: \"JetBrainsMono Nerd Font\"\n"
                       "font.size: 14\n"
                       "zoom: 1.500000\n"
                       "line_numbers: true\n"
+                      "ruler: false\n"
                       "bg.color: rgba(255, 255, 255, 255)";
 
     char buffer[256];
