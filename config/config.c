@@ -701,8 +701,6 @@ cfg_fprint(FILE *stream, Cfg cfg)
             CfgColor c = cfg.entries[i].val.color;
             fprintf(stream, "rgba(%d, %d, %d, %d)\n", c.r, c.g, c.b, c.a);
             break;
-        default:
-            fprintf(stream, "CfgError: unknown type\n");
         }
     }
 }
