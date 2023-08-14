@@ -55,8 +55,8 @@ typedef struct {
 
 typedef struct {
     CfgEntry *entries;
-    int max_entries;
-    int size;
+    int count;
+    int capacity;
 } Cfg;
 
 /**
@@ -64,9 +64,9 @@ typedef struct {
  *
  * @param[out] cfg The Cfg object to be initialized
  * @param[in] entries The array that will contain the parsed entries
- * @param[in] max_entries The maximum number of entries the array can hold
+ * @param[in] capacity The maximum number of entries the array can hold
  */
-void cfg_init(Cfg *cfg, CfgEntry *entries, int max_entries);
+void cfg_init(Cfg *cfg, CfgEntry *entries, int capacity);
 
 /**
  * @brief Parses the source data and populates the Cfg object

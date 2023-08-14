@@ -549,11 +549,11 @@ parse_entry(CfgEntry *entry, CfgError *err)
 }
 
 void
-cfg_init(Cfg *cfg, CfgEntry *entries, int max_entries)
+cfg_init(Cfg *cfg, CfgEntry *entries, int capacity)
 {
     cfg->entries = entries;
-    cfg->max_entries = max_entries;
-    cfg->size = 0;
+    cfg->count = 0;
+    cfg->capacity = capacity;
 }
 
 int
@@ -562,16 +562,16 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, CfgError *err)
     init_error(err);
     init_scanner(src, src_len);
 
-    cfg->size = 0;
+    cfg->count = 0;
     skip_whitespace_and_comments();
 
-    while (!is_at_end() && cfg->size < cfg->max_entries) {
-        CfgEntry *entry = &cfg->entries[cfg->size];
+    while (!is_at_end() && cfg->count < cfg->capacity) {
+        CfgEntry *entry = &cfg->entries[cfg->count];
 
         if (parse_entry(entry, err) != 0)
             return -1;
 
-        cfg->size++;
+        cfg->count++;
         skip_whitespace_and_comments();
     }
 
@@ -579,7 +579,7 @@ cfg_parse(const char *src, int src_len, Cfg *cfg, CfgError *err)
 }
 
 static char *
-read_file(const char *filename, int *size, char *err)
+read_file(const char *filename, int *count, char *err)
 {
     FILE *file = fopen(filename, "rb");
     if (!file) {
@@ -588,25 +588,25 @@ read_file(const char *filename, int *size, char *err)
     }
 
     fseek(file, 0, SEEK_END);
-    size_t size_ = (size_t) ftell(file);
+    size_t file_size = (size_t) ftell(file);
     rewind(file);
 
-    char *src = malloc(size_ + 1);
+    char *src = malloc(file_size + 1);
     if (src == NULL) {
         snprintf(err, CFG_MAX_ERR + 1, "memory allocation failed");
         return NULL;
     }
 
-    size_t bytes_read = fread(src, sizeof(char), size_, file);
+    size_t bytes_read = fread(src, sizeof(char), file_size, file);
     fclose(file);
 
-    if (bytes_read != size_) {
+    if (bytes_read != file_size) {
         free(src);
         snprintf(err, CFG_MAX_ERR + 1, "failed to read the file");
         return NULL;
     }
 
-    *size = size_;
+    *count = file_size;
     return src;
 }
 
@@ -641,7 +641,7 @@ cfg_load(const char *filename, Cfg *cfg, CfgError *err)
 static void *
 get_val(Cfg cfg, const char *key, void *default_, CfgValType type)
 {
-    for (int i = cfg.size - 1; i >= 0; i--) {
+    for (int i = cfg.count - 1; i >= 0; i--) {
         if (cfg.entries[i].type == type && !strcmp(key, cfg.entries[i].key))
             return &cfg.entries[i].val;
     }
@@ -681,7 +681,7 @@ cfg_get_color(Cfg cfg, const char *key, CfgColor default_)
 void
 cfg_fprint(FILE *stream, Cfg cfg)
 {
-    for (int i = 0; i < cfg.size; i++) {
+    for (int i = 0; i < cfg.count; i++) {
         fprintf(stream, "%s: ", cfg.entries[i].key);
 
         switch (cfg.entries[i].type) {
