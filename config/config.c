@@ -244,7 +244,11 @@ error(CfgError *err, const char *fmt, ...)
 void
 cfg_fprint_error(FILE *stream, CfgError *err)
 {
-    fprintf(stream, "Error at %d:%d :: %s\n", err->row, err->col, err->msg);
+    if (err->row == -1 && err->col == -1)
+        fprintf(stream, "Error: %s\n", err->msg);
+    else
+        fprintf(stream, "Error at %d:%d :: %s\n", err->row, err->col, err->msg);
+
 #ifdef CFG_DETAILED_ERRORS
     fprintf(stream, "\n");
     if (err->row > 0)
