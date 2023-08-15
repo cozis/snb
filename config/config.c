@@ -610,8 +610,6 @@ read_file(const char *filename, int *count, char *err)
     return src;
 }
 
-#define CFG_EXT ".cfg"
-
 int
 cfg_load(const char *filename, Cfg *cfg, CfgError *err)
 {
@@ -623,8 +621,8 @@ cfg_load(const char *filename, Cfg *cfg, CfgError *err)
         return -1;
     }
 
-    const char *ext = filename + (len - strlen(CFG_EXT));
-    if (strcmp(ext, CFG_EXT) != 0) {
+    const char *ext = filename + (len - strlen(CFG_FILE_EXT));
+    if (strcmp(ext, CFG_FILE_EXT) != 0) {
         snprintf(err->msg, CFG_MAX_ERR, "invalid file extension");
         return -1;
     }
@@ -641,35 +639,35 @@ cfg_load(const char *filename, Cfg *cfg, CfgError *err)
 }
 
 static void *
-get_val(Cfg cfg, const char *key, void *default_, CfgValType type)
+get_val(Cfg *cfg, const char *key, void *default_, CfgValType type)
 {
-    for (int i = cfg.count - 1; i >= 0; i--) {
-        if (cfg.entries[i].type == type && !strcmp(key, cfg.entries[i].key))
-            return &cfg.entries[i].val;
+    for (int i = cfg->count - 1; i >= 0; i--) {
+        if (cfg->entries[i].type == type && !strcmp(key, cfg->entries[i].key))
+            return &(cfg->entries[i].val);
     }
     return default_;
 }
 
 char *
-cfg_get_str(Cfg cfg, const char *key, char *default_)
+cfg_get_str(Cfg *cfg, const char *key, char *default_)
 {
     return (char *) get_val(cfg, key, default_, CFG_TYPE_STR);
 }
 
 bool
-cfg_get_bool(Cfg cfg, const char *key, bool default_)
+cfg_get_bool(Cfg *cfg, const char *key, bool default_)
 {
     return *(bool *) get_val(cfg, key, &default_, CFG_TYPE_BOOL);
 }
 
 int
-cfg_get_int(Cfg cfg, const char *key, int default_)
+cfg_get_int(Cfg *cfg, const char *key, int default_)
 {
     return *(int *) get_val(cfg, key, &default_, CFG_TYPE_INT);
 }
 
 int
-cfg_get_int_min(Cfg cfg, const char *key, int default_, int min)
+cfg_get_int_min(Cfg *cfg, const char *key, int default_, int min)
 {
     int value = cfg_get_int(cfg, key, default_);
     if (value < min)
@@ -678,7 +676,7 @@ cfg_get_int_min(Cfg cfg, const char *key, int default_, int min)
 }
 
 int
-cfg_get_int_max(Cfg cfg, const char *key, int default_, int max)
+cfg_get_int_max(Cfg *cfg, const char *key, int default_, int max)
 {
     int value = cfg_get_int(cfg, key, default_);
     if (value > max)
@@ -687,7 +685,7 @@ cfg_get_int_max(Cfg cfg, const char *key, int default_, int max)
 }
 
 int
-cfg_get_int_range(Cfg cfg, const char *key, int default_, int min, int max)
+cfg_get_int_range(Cfg *cfg, const char *key, int default_, int min, int max)
 {
     int value = cfg_get_int(cfg, key, default_);
     if (value < min || value > max)
@@ -696,13 +694,13 @@ cfg_get_int_range(Cfg cfg, const char *key, int default_, int min, int max)
 }
 
 float
-cfg_get_float(Cfg cfg, const char *key, float default_)
+cfg_get_float(Cfg *cfg, const char *key, float default_)
 {
     return *(float *) get_val(cfg, key, &default_, CFG_TYPE_FLOAT);
 }
 
 float
-cfg_get_float_min(Cfg cfg, const char *key, float default_, float min)
+cfg_get_float_min(Cfg *cfg, const char *key, float default_, float min)
 {
     float value = cfg_get_float(cfg, key, default_);
     if (value < min)
@@ -711,7 +709,7 @@ cfg_get_float_min(Cfg cfg, const char *key, float default_, float min)
 }
 
 float
-cfg_get_float_max(Cfg cfg, const char *key, float default_, float max)
+cfg_get_float_max(Cfg *cfg, const char *key, float default_, float max)
 {
     float value = cfg_get_float(cfg, key, default_);
     if (value > max)
@@ -720,7 +718,7 @@ cfg_get_float_max(Cfg cfg, const char *key, float default_, float max)
 }
 
 float
-cfg_get_float_range(Cfg cfg, const char *key, float default_, float min, float max)
+cfg_get_float_range(Cfg *cfg, const char *key, float default_, float min, float max)
 {
     float value = cfg_get_float(cfg, key, default_);
     if (value < min || value > max)
@@ -729,32 +727,32 @@ cfg_get_float_range(Cfg cfg, const char *key, float default_, float min, float m
 }
 
 CfgColor
-cfg_get_color(Cfg cfg, const char *key, CfgColor default_)
+cfg_get_color(Cfg *cfg, const char *key, CfgColor default_)
 {
     return *(CfgColor *) get_val(cfg, key, &default_, CFG_TYPE_COLOR);
 }
 
 void
-cfg_fprint(FILE *stream, Cfg cfg)
+cfg_fprint(FILE *stream, Cfg *cfg)
 {
-    for (int i = 0; i < cfg.count; i++) {
-        fprintf(stream, "%s: ", cfg.entries[i].key);
+    for (int i = 0; i < cfg->count; i++) {
+        fprintf(stream, "%s: ", cfg->entries[i].key);
 
-        switch (cfg.entries[i].type) {
+        switch (cfg->entries[i].type) {
         case CFG_TYPE_STR:
-            fprintf(stream, "\"%s\"\n", cfg.entries[i].val.str);
+            fprintf(stream, "\"%s\"\n", cfg->entries[i].val.str);
             break;
         case CFG_TYPE_BOOL:
-            fprintf(stream, "%s\n", cfg.entries[i].val.bool_ ? "true" : "false");
+            fprintf(stream, "%s\n", cfg->entries[i].val.bool_ ? "true" : "false");
             break;
         case CFG_TYPE_INT:
-            fprintf(stream, "%d\n", cfg.entries[i].val.int_);
+            fprintf(stream, "%d\n", cfg->entries[i].val.int_);
             break;
         case CFG_TYPE_FLOAT:
-            fprintf(stream, "%f\n", cfg.entries[i].val.float_);
+            fprintf(stream, "%f\n", cfg->entries[i].val.float_);
             break;
         case CFG_TYPE_COLOR:;
-            CfgColor c = cfg.entries[i].val.color;
+            CfgColor c = cfg->entries[i].val.color;
             fprintf(stream, "rgba(%d, %d, %d, %d)\n", c.r, c.g, c.b, c.a);
             break;
         }

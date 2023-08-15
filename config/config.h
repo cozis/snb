@@ -7,6 +7,8 @@
 
 // #define CFG_DETAILED_ERRORS
 
+#define CFG_FILE_EXT ".cfg"
+
 #define CFG_MAX_KEY 32
 #define CFG_MAX_VAL 64
 #define CFG_MAX_ERR 64
@@ -93,23 +95,27 @@ int cfg_parse(const char *src, int src_len, Cfg *cfg, CfgError *err);
  */
 int cfg_load(const char *filename, Cfg *cfg, CfgError *err);
 
-char *cfg_get_str(Cfg cfg, const char *key, char *default_);
+char *cfg_get_str(Cfg *cfg, const char *key, char *default_);
 
-bool cfg_get_bool(Cfg cfg, const char *key, bool default_);
+bool cfg_get_bool(Cfg *cfg, const char *key, bool default_);
 
-int cfg_get_int(Cfg cfg, const char *key, int default_);
-int cfg_get_int_min(Cfg cfg, const char *key, int default_, int min);
-int cfg_get_int_max(Cfg cfg, const char *key, int default_, int max);
-int cfg_get_int_range(Cfg cfg, const char *key, int default_, int min, int max);
+int cfg_get_int(Cfg *cfg, const char *key, int default_);
+int cfg_get_int_min(Cfg *cfg, const char *key, int default_, int min);
+int cfg_get_int_max(Cfg *cfg, const char *key, int default_, int max);
+int cfg_get_int_range(Cfg *cfg, const char *key, int default_, int min, int max);
 
-float cfg_get_float(Cfg cfg, const char *key, float default_);
-float cfg_get_float_min(Cfg cfg, const char *key, float default_, float min);
-float cfg_get_float_max(Cfg cfg, const char *key, float default_, float max);
-float cfg_get_float_range(Cfg cfg, const char *key, float default_, float min, float max);
+float cfg_get_float(Cfg *cfg, const char *key, float default_);
+float cfg_get_float_min(Cfg *cfg, const char *key, float default_, float min);
+float cfg_get_float_max(Cfg *cfg, const char *key, float default_, float max);
+float cfg_get_float_range(Cfg *cfg,
+                          const char *key,
+                          float default_,
+                          float min,
+                          float max);
 
-CfgColor cfg_get_color(Cfg cfg, const char *key, CfgColor default_);
+CfgColor cfg_get_color(Cfg *cfg, const char *key, CfgColor default_);
 
-void cfg_fprint(FILE *stream, Cfg cfg);
+void cfg_fprint(FILE *stream, Cfg *cfg);
 void cfg_fprint_error(FILE *stream, CfgError *err);
 
 #endif

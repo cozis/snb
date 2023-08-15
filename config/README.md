@@ -27,7 +27,7 @@ main(void)
     int res = cfg_load("sample.cfg", &cfg, &err);
 
     if (res != 0) {
-        fprintf(stderr, "%s\n", err);
+        cfg_fprint_error(stderr, &err);
         free(entries);
         return 1;
     }
@@ -35,16 +35,16 @@ main(void)
     // Default value         --------------------+
     // (if key is not found)                     |
     //                                           v
-    char* font = cfg_get_str(cfg, "font", "Noto Sans Mono");
-    int font_size = cfg_get_int(cfg, "font.size", 12);
-    float zoom = cfg_get_float(cfg, "zoom", 1.0);
-    bool line_num = cfg_get_bool(cfg, "line_numbers", true);
-    CfgColor bg_color = cfg_get_color(cfg, "bg.color",
+    char* font = cfg_get_str(&cfg, "font", "Noto Sans Mono");
+    int font_size = cfg_get_int(&cfg, "font.size", 12);
+    float zoom = cfg_get_float(&cfg, "zoom", 1.0);
+    bool line_num = cfg_get_bool(&cfg, "line_numbers", true);
+    CfgColor bg = cfg_get_color(&cfg, "bg.color",
                                       (CfgColor){
                                           .r = 255,
                                           .g = 255,
                                           .b = 255,
-                                          .a = 255,
+                                          .a = 1,
                                       });
 
     free(entries);

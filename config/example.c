@@ -32,11 +32,11 @@ main(int argc, char *argv[])
         return 1;
     }
 
-    char *font = cfg_get_str(cfg, "font", "Noto Sans Mono");
-    int font_size = cfg_get_int(cfg, "font.size", 12);
-    float zoom = cfg_get_float(cfg, "zoom", 1.0);
-    bool line_num = cfg_get_bool(cfg, "lineNumbers", true);
-    CfgColor bg = cfg_get_color(cfg, "bg.color",
+    char *font = cfg_get_str(&cfg, "font", "Noto Sans Mono");
+    int font_size = cfg_get_int(&cfg, "font.size", 12);
+    float zoom = cfg_get_float(&cfg, "zoom", 1.0);
+    bool line_num = cfg_get_bool(&cfg, "lineNumbers", true);
+    CfgColor bg = cfg_get_color(&cfg, "bg.color",
                                 (CfgColor){
                                     .r = 255,
                                     .g = 255,
@@ -50,7 +50,7 @@ main(int argc, char *argv[])
     fprintf(stdout, "lineNumbers: %s\n", line_num ? "true" : "false");
     fprintf(stdout, "bg.color: rgba(%d, %d, %d, %d)\n", bg.r, bg.g, bg.b, bg.a);
 
-    // cfg_fprint(stdout, cfg);
+    // cfg_fprint(stdout, &cfg);
 
     free(entries);
     return 0;
