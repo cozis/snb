@@ -82,60 +82,46 @@ run_print_err_test_2(Scoreboard *scoreboard)
     }
 }
 
-void
-run_print_test(Scoreboard *scoreboard)
+static TestResult
+run_print_test_on_source(const char *src)
 {
-    Cfg cfg = {
-        .entries =
-            (CfgEntry[]){
-                {.key = "font",
-                 .type = CFG_TYPE_STR,
-                 .val.str = "JetBrainsMono Nerd Font"},
-                {.key = "font.size", .type = CFG_TYPE_INT, .val.int_ = 14},
-                {.key = "zoom", .type = CFG_TYPE_FLOAT, .val.float_ = 1.5},
-                {.key = "line_numbers", .type = CFG_TYPE_BOOL, .val.bool_ = true},
-                {.key = "ruler", .type = CFG_TYPE_BOOL, .val.bool_ = false},
-                {.key = "bg.color",
-                 .type = CFG_TYPE_COLOR,
-                 .val.color = {.r = 255, .g = 255, .b = 255, .a = 255}},
-            },
-        .capacity = TEST_CAPACITY,
-        .count = 6,
-    };
+    Cfg cfg;
+    CfgError error;
+    CfgEntry entries[1024];
 
-    char expected[] = "font: \"JetBrainsMono Nerd Font\"\n"
-                      "font.size: 14\n"
-                      "zoom: 1.500000\n"
-                      "line_numbers: true\n"
-                      "ruler: false\n"
-                      "bg.color: rgba(255, 255, 255, 255)";
+    cfg_init(&cfg, entries, COUNT_OF(entries));
+    cfg_parse(src, &cfg, &err);
 
     char buffer[256];
     FILE *tmp = fmemopen(buffer, sizeof(buffer), "w");
-    if (tmp == NULL) {
-        fprintf(stream, "FATAL: fmemopen() failed");
-        return;
-    }
+    ASSERT_CONTEXT(tmp != NULL); // If this triggers, "tmp" will leak
 
     cfg_fprint(tmp, cfg);
+
     fclose(tmp);
 
-    scoreboard->total++;
+    ASSERT( !strncmp(buffer, expected, strlen(expected)) );
 
-    if (strncmp(buffer, expected, strlen(expected)) != 0) {
-        log_result(__LINE__, true);
-        scoreboard->failed++;
-    } else {
-        log_result(__LINE__, false);
-        scoreboard->passed++;
-    }
+    return OK;
+}
+
+static TestResult
+run_print_test(void)
+{
+    static const char src[] = 
+        "font: \"JetBrainsMono Nerd Font\"\n"
+        "font.size: 14\n"
+        "zoom: 1.500000\n"
+        "line_numbers: true\n"
+        "ruler: false\n"
+        "bg.color: rgba(255, 255, 255, 255)";
+    return run_print_test_on_source(src);
 }
 
 void
 run_print_tests(Scoreboard *scoreboard, FILE *stream_)
 {
-    stream = stream_;
-    run_print_test(scoreboard);
+    TestResult result = run_print_test(scoreboard);
     run_print_err_test_1(scoreboard);
     run_print_err_test_2(scoreboard);
 }

@@ -1,116 +1,33 @@
-#include <stdio.h>
 #include <string.h>
-
-#include "../config.h"
 #include "test.h"
 #include "test_load.h"
+#include "../config.h"
 
-typedef struct {
-    enum { TC_SUCC, TC_ERR } type;
-    int line;
-    const char *filename;
-    // TC_ERR
-    const char *expected_error;
-} TestCase;
-
-static const TestCase test_cases[] = {
-    {
-        .type = TC_SUCC,
-        .line = __LINE__,
-        .filename = "sample.cfg",
-    },
-    {
-        .type = TC_ERR,
-        .line = __LINE__,
-        .filename = "sample.txt",
-        .expected_error = "invalid file extension",
-    },
-    {
-        .type = TC_ERR,
-        .line = __LINE__,
-        .filename = "",
-        .expected_error = "invalid filename",
-    },
-    {
-        .type = TC_ERR,
-        .line = __LINE__,
-        .filename = "sample2.cfg",
-        .expected_error = "failed to open the file",
-    },
-};
-
-static FILE *stream;
-
-static void
-log_result(TestCase tc, bool failed)
+static TestResult
+run_test_case(void)
 {
-    char *prefix = tc.type ? "ERROR   CASE" : "SUCCESS CASE";
-
-    if (failed) {
-        fprintf(stream, "%s - " RED "FAILED " RESET "(%s:%d)\n", prefix, __FILE__,
-                tc.line);
-    } else {
-        fprintf(stream, "%s - " GREEN "PASSED " RESET "(%s:%d)\n", prefix, __FILE__,
-                tc.line);
-    }
-}
-
-static void
-run_test_case(TestCase tc, Scoreboard *scoreboard)
-{
-    Cfg cfg;
-    CfgEntry entries[TEST_CAPACITY];
-
-    cfg_init(&cfg, entries, TEST_CAPACITY);
-
     CfgError err;
-    int res = cfg_load(tc.filename, &cfg, &err);
+    CfgEntry entries[10];
+    Cfg cfg = WRAP(entries);
+    
+    ASSERT(  0 == cfg_load("sample.cfg", &cfg, &err) );
+    
+    ASSERT( -1 == cfg_load("sample.txt", &cfg, &err) );
+    ASSERT( !strcmp("invalid file extension", err.msg));
 
-    switch (tc.type) {
-    case TC_SUCC:
-        if (res != 0) {
-            // SUCCESS CASE - FAILED
-            cfg_fprint_error(stream, &err);
-            log_result(tc, true);
-            scoreboard->failed++;
-        } else {
-            // SUCCESS CASE - PASSED
-            log_result(tc, false);
-            scoreboard->passed++;
-        }
-        break;
+    ASSERT( -1 == cfg_load("", &cfg, &err) );
+    ASSERT( !strcmp("invalid file name", err.msg));
 
-    case TC_ERR:
-        if (res == 0) {
-            // ERROR CASE - FAILED (successful parsing)
-            fprintf(stream, "Error case was parsed successfully\n");
-            log_result(tc, true);
-            scoreboard->failed++;
-        } else {
-            if (strcmp(tc.expected_error, err.msg) != 0) {
-                // ERROR CASE - FAILED (error message mismatch)
-                cfg_fprint_error(stderr, &err);
-                log_result(tc, true);
-                scoreboard->failed++;
-            } else {
-                // ERROR CASE - PASSED
-                log_result(tc, false);
-                scoreboard->passed++;
-            }
-        }
-        break;
-    }
+    ASSERT( -1 == cfg_load("sample2.cfg", &cfg, &err) );
+    ASSERT( !strcmp("failed to open file", err.msg));
+
+    return OK;
 }
 
 void
-run_load_tests(Scoreboard *scoreboard, FILE *stream_)
+run_load_tests(Scoreboard *scoreboard, FILE *stream)
 {
-    stream = stream_;
-
-    int total = sizeof(test_cases) / sizeof(test_cases[0]);
-    scoreboard->total += total;
-
-    for (int i = 0; i < total; i++) {
-        run_test_case(test_cases[i], scoreboard);
-    }
+    TestResult result = run_test_case();
+    updateScoreboard(scoreboard, result);
+    logResult(result, stream);
 }

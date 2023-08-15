@@ -235,8 +235,8 @@ error(CfgError *err, const char *fmt, ...)
 
     va_list vargs;
     va_start(vargs, fmt);
-    snprintf(err->msg, CFG_MAX_ERR + 1, prefix);
-    vsnprintf(err->msg + prefix_len, CFG_MAX_ERR - prefix_len + 1, fmt, vargs);
+    snprintf(err->msg, CFG_MAX_ERR, prefix);
+    vsnprintf(err->msg + prefix_len, CFG_MAX_ERR - prefix_len, fmt, vargs);
     va_end(vargs);
     return -1;
 }
@@ -583,7 +583,7 @@ read_file(const char *filename, int *count, char *err)
 {
     FILE *file = fopen(filename, "rb");
     if (!file) {
-        snprintf(err, CFG_MAX_ERR + 1, "failed to open the file");
+        snprintf(err, CFG_MAX_ERR, "failed to open the file");
         return NULL;
     }
 
@@ -593,7 +593,7 @@ read_file(const char *filename, int *count, char *err)
 
     char *src = malloc(file_size + 1);
     if (src == NULL) {
-        snprintf(err, CFG_MAX_ERR + 1, "memory allocation failed");
+        snprintf(err, CFG_MAX_ERR, "memory allocation failed");
         return NULL;
     }
 
@@ -602,13 +602,15 @@ read_file(const char *filename, int *count, char *err)
 
     if (bytes_read != file_size) {
         free(src);
-        snprintf(err, CFG_MAX_ERR + 1, "failed to read the file");
+        snprintf(err, CFG_MAX_ERR, "failed to read the file");
         return NULL;
     }
 
     *count = file_size;
     return src;
 }
+
+#define CFG_EXT ".cfg"
 
 int
 cfg_load(const char *filename, Cfg *cfg, CfgError *err)
@@ -617,13 +619,13 @@ cfg_load(const char *filename, Cfg *cfg, CfgError *err)
 
     size_t len = strlen(filename);
     if (len < 5) {
-        snprintf(err->msg, CFG_MAX_ERR + 1, "invalid filename");
+        snprintf(err->msg, CFG_MAX_ERR, "invalid filename");
         return -1;
     }
 
-    const char *ext = filename + (len - 4);
-    if (strncmp(ext, ".cfg", 4) != 0) {
-        snprintf(err->msg, CFG_MAX_ERR + 1, "invalid file extension");
+    const char *ext = filename + (len - strlen(CFG_EXT));
+    if (strcmp(ext, CFG_EXT) != 0) {
+        snprintf(err->msg, CFG_MAX_ERR, "invalid file extension");
         return -1;
     }
 

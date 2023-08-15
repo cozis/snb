@@ -15,7 +15,7 @@ typedef struct {
     int off;
     int col;
     int row;
-    char msg[CFG_MAX_ERR + 1];
+    char msg[CFG_MAX_ERR];
 
 #ifdef CFG_DETAILED_ERRORS
     bool truncated[3];
