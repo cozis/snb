@@ -35,6 +35,7 @@ typedef struct {
     int line;
 } TestResult;
 
+// clang-format off
 #define ASSERT(X)              \
     if (!(X))                  \
         return (TestResult) {  \
@@ -53,6 +54,7 @@ typedef struct {
         .capacity=COUNT_OF(E), \
         .count=COUNT_OF(E)     \
     }
+// clang-format on
 
 void log_result(TestResult result, FILE *stream);
 void update_scoreboard(Scoreboard *sb, TestResult result);

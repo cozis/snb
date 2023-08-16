@@ -9,16 +9,16 @@ TestResult
 run_test(const char *expected, void *arg, bool is_error)
 {
     char buffer[256];
-    FILE *tmp = fmemopen(buffer, sizeof(buffer), "w");
-    if (tmp == NULL)
+    FILE *stream = fmemopen(buffer, sizeof(buffer), "w");
+    if (stream == NULL)
         return ABORT;
 
     if (!is_error)
-        cfg_fprint(tmp, (Cfg *) arg);
+        cfg_fprint(stream, (Cfg *) arg);
     else
-        cfg_fprint_error(tmp, (CfgError *) arg);
+        cfg_fprint_error(stream, (CfgError *) arg);
 
-    fclose(tmp);
+    fclose(stream);
 
     ASSERT(0 == strncmp(expected, buffer, strlen(expected)));
     return OK;

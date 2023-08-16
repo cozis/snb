@@ -3,27 +3,27 @@
 void
 log_result(TestResult result, FILE *stream)
 {
-    char *first;
+    char *res;
     char *color;
 
     switch (result.type) {
     case TEST_PASSED:
-        first = "PASSED";
+        res = "PASSED";
         color = GREEN;
         break;
 
     case TEST_FAILED:
-        first = "FAILED";
+        res = "FAILED";
         color = RED;
         break;
 
     case TEST_ABORTED:
-        first = "ABORTED";
-        color = RED;  // Same color as TEST_FAILED?
+        res = "ABORTED";
+        color = RED;
         break;
     }
 
-    fprintf(stream, "%s%s" RESET " - %s:%d\n", color, first, result.file,
+    fprintf(stream, "%s%s" RESET " - %s:%d\n", color, res, result.file,
             result.line);
 }
 
