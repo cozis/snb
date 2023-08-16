@@ -3,12 +3,12 @@
 
 #include <stdio.h>
 
-// #define LOGFILE
+#define LOGFILE
 
 #ifdef LOGFILE
-#define RED
-#define GREEN
-#define RESET
+#define RED ""
+#define GREEN ""
+#define RESET ""
 #else
 #define RED "\e[1;31m"
 #define GREEN "\e[1;32m"

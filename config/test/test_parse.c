@@ -445,7 +445,6 @@ run_test_case(TestCase tc)
 
     switch (tc.type) {
     case TC_SUCC:
-        cfg_fprint_error(stdout, &err);
         ASSERT(res == 0);
         ASSERT(tc.expected_count == cfg.count);
         return assert_eq_entries(tc, cfg.entries);
