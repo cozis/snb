@@ -59,7 +59,7 @@ static void handleEvent(Widget *widget, Event event);
 static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area);
 static void free_(Widget *widget);
 
-bool splitView(SplitDirection dir, Widget *old_widget, Widget *new_widget)
+bool splitView(WidgetStyle *base_style, SplitDirection dir, Widget *old_widget, Widget *new_widget)
 {
     SplitView *split = getStructMemory();
     if (split == NULL)
@@ -88,7 +88,7 @@ bool splitView(SplitDirection dir, Widget *old_widget, Widget *new_widget)
             break;
     }
 
-    initWidget(&split->base, draw, free_, handleEvent);
+    initWidget(&split->base, base_style, draw, free_, handleEvent);
     split->axis = axis;
     split->left_ratio = 0.5;
     split->left_or_up = left_or_up;

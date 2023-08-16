@@ -3,12 +3,25 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
-#include "buff_view.h"
+#include "text_input.h"
+#include "../utils/basic.h"
 
-#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
-#define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
+size_t getTextInputContents(TextInput *input, char *dst, size_t max)
+{
+    GapBuffer *gap = input->gap;
+    if (dst && max > 0)
+        GapBuffer_copyDataOut(gap, dst, max);
+    return GapBuffer_getByteCount(gap);
+}
 
-int UTF8ToUTF32(const char *utf8_data, int nbytes, uint32_t *utf32_code)
+void setTextInputContents(TextInput *input, const char *path)
+{
+    GapBuffer *gap = input->gap;
+    GapBuffer_whipeClean(gap);
+    GapBuffer_insertString(gap, path, strlen(path));
+}
+
+static int UTF8ToUTF32(const char *utf8_data, int nbytes, uint32_t *utf32_code)
 {
     assert(utf8_data != NULL);
     assert(utf32_code != NULL);
@@ -170,139 +183,151 @@ stringRenderWidth(Font font, int font_size, const char *str, size_t len)
     return w;
 }
 
-#define MAX_BUFFERS 32
-
 static void handleEvent(Widget *widget, Event event);
 static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area);
 static void free_(Widget *widget);
 
-static bool initialized = false;
-static BufferView buffers[MAX_BUFFERS];
-static bool  used_buffers[MAX_BUFFERS];
-
-static BufferView *allocStructMemory(void)
+TextInput *createTextInput(WidgetStyle *base_style, TextInputStyle *style)
 {
-    if (!initialized) {
-        for (int i = 0; i < MAX_BUFFERS; i++)
-            used_buffers[i] = false;
-        initialized = true;
-    }
-
-    BufferView *bufview = NULL;
-    for (int i = 0; i < MAX_BUFFERS; i++)
-        if (used_buffers[i] == false) {
-            bufview = buffers+i;
-            used_buffers[i] = true;
-            break;
-        }
-
-    return bufview;
-}
-
-static void freeStructMemory(BufferView *bufview)
-{
-    int i = bufview - buffers;
-    assert(i >= 0 && i < MAX_BUFFERS && used_buffers[i] == true);
-    used_buffers[i] = false;
-}
-
-Widget *createBufferView(BufferViewStyle *style)
-{
-    BufferView *bufview = allocStructMemory();
+    TextInput *input = malloc(sizeof(TextInput));
+    if (input == NULL)
+        return NULL;
 
     GapBuffer *gap;
     {
         size_t len = 1 << 16;
         void  *mem = malloc(len);
         if (mem == NULL) {
-            freeStructMemory(bufview);
+            free(input);
             return NULL;
         }
         gap = GapBuffer_createUsingMemory(mem, len, free);
         if (gap == NULL) {
-            freeStructMemory(bufview);
+            free(input);
             free(mem);
             return NULL;
         }
     }
 
-    initWidget(&bufview->base, draw, free_, handleEvent);
-    bufview->style = style;
-    bufview->loaded_font_path = NULL;
-    bufview->loaded_font_size = 14;
-    bufview->loaded_font = GetFontDefault();
-    bufview->gap = gap;
-    bufview->file[0] = '\0';
+    initWidget(&input->base, base_style, draw, free_, handleEvent);
+    input->style = style;
+    input->loaded_font_path = NULL;
+    input->loaded_font_size = 14;
+    input->loaded_font = GetFontDefault();
+    input->selecting = false;
+    input->select_first  = 0;
+    input->select_second = 0;
+    input->gap = gap;
 
-    return (Widget*) bufview;
+    return input;
 }
 
 static void free_(Widget *widget)
 {
-    BufferView *bufview = (BufferView*) widget;
-    UnloadFont(bufview->loaded_font);
-    GapBuffer_destroy(bufview->gap);
-    freeStructMemory(bufview);
+    TextInput *input = (TextInput*) widget;
+    UnloadFont(input->loaded_font);
+    GapBuffer_destroy(input->gap);
+    free(input);
 }
 
-static void reloadFont(BufferView *bufview)
+static void reloadFont(TextInput *input)
 {
-    const char *font_path = bufview->style->font_path;
-    float       font_size = bufview->style->font_size;
+    const char *font_path = input->style->font_path;
+    float       font_size = input->style->font_size;
 
     Font font;
-    if (bufview->style->font_path)
+    if (input->style->font_path)
         font = LoadFontEx(font_path, font_size, NULL, 250);
     else
         font = GetFontDefault();
 
-    UnloadFont(bufview->loaded_font); // FIXME: Is it okay to unload the default font?
-    bufview->loaded_font = font;
-    bufview->loaded_font_path = font_path;
-    bufview->loaded_font_size = font_size;
+    UnloadFont(input->loaded_font); // FIXME: Is it okay to unload the default font?
+    input->loaded_font = font;
+    input->loaded_font_path = font_path;
+    input->loaded_font_size = font_size;
 }
 
-static void reloadStyleIfChanged(BufferView *bufview)
+static void reloadStyleIfChanged(TextInput *input)
 {
-    if (bufview->style) {
-        bool changed_font_path = (bufview->style->font_path != bufview->loaded_font_path);
-        bool changed_font_size = (bufview->style->font_size != bufview->loaded_font_size);
+    if (input->style) {
+        bool changed_font_path = (input->style->font_path != input->loaded_font_path);
+        bool changed_font_size = (input->style->font_size != input->loaded_font_size);
         if (changed_font_path || changed_font_size)
-            reloadFont(bufview);
+            reloadFont(input);
     }
 }
 
-static void drawRuler(float x, float y, float h, Font font, int font_size, int ruler_width, Color color) 
+static bool somethingSelected(TextInput *input)
 {
-    float font_width = MeasureTextEx(font, "A", font_size, 0).x;
-    int offset = ruler_width * font_width;
-    DrawLine(x + offset, y, x + offset, y + h, color);
+    return input->select_first != input->select_second;
+}
+
+static void dropSelection(TextInput *input)
+{
+    input->select_first  = 0;
+    input->select_second = 0;
+}
+
+static void drawSelection(TextInput *input, GapBufferLine line, 
+                          float line_x, float line_y, 
+                          float line_h, size_t line_offset)
+{
+    if (!somethingSelected(input))
+        return;
+        
+    size_t select_start = MIN(input->select_first, input->select_second);
+    size_t select_end   = MAX(input->select_first, input->select_second);
+
+    if (select_start >= line_offset + line.len || select_end < line_offset)
+        return;
+
+    size_t select_in_line_start;
+    size_t select_in_line_end;
+
+    if (select_start < line_offset)
+        select_in_line_start = 0;
+    else
+        select_in_line_start = select_start - line_offset;
+
+    if (select_end < line_offset + line.len)
+        select_in_line_end = select_end - line_offset;
+    else
+        select_in_line_end = line.len;
+
+    Font       font = input->loaded_font;
+    float font_size = input->loaded_font_size;
+
+    Rectangle selection_rect = {
+        .x = line_x + stringRenderWidth(font, font_size, line.str, select_in_line_start),
+        .y = line_y,
+        .width  = stringRenderWidth(font, font_size, line.str + select_in_line_start, select_in_line_end - select_in_line_start),
+        .height = line_h,
+    };
+    DrawRectangleRec(selection_rect, (Color) {0x34, 0x37, 0x45, 0xff});
 }
 
 static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area)
 {
-    BufferView *bufview = (BufferView*) widget;
-    reloadStyleIfChanged(bufview);
+    (void) area;
 
-    float font_size    = bufview->style->font_size;
-    float line_h       = bufview->style->line_h * font_size;
-    float cursor_w     = bufview->style->cursor_w;
-    float ruler_x      = bufview->style->ruler_x;
-    float pad_h        = bufview->style->pad_h;
-    float pad_v        = bufview->style->pad_v;
-    Color cursor_color = bufview->style->color_cursor;
-    Color   font_color = bufview->style->color_text;
-    Color  ruler_color = bufview->style->color_ruler;
+    TextInput *input = (TextInput*) widget;
+    reloadStyleIfChanged(input);
+
+    float font_size    = input->style->font_size;
+    float line_h       = input->style->line_h * font_size;
+    float cursor_w     = input->style->cursor_w;
+    float pad_h        = input->style->pad_h;
+    float pad_v        = input->style->pad_v;
+    Color cursor_color = input->style->color_cursor;
+    Color   font_color = input->style->color_text;
 
     if (getFocus() != widget)
         cursor_color = GRAY;
 
-    Font      font = bufview->loaded_font;
-    GapBuffer *gap = bufview->gap;
+    Font      font = input->loaded_font;
+    GapBuffer *gap = input->gap;
     
     size_t cursor = GapBuffer_rawCursorPosition(gap);
-
-    drawRuler(offset.x, offset.y, bufview->base.last_logic_area.y, font, font_size, ruler_x, ruler_color);
 
     GapBufferLine line;
     GapBufferIter iter;
@@ -312,11 +337,13 @@ static Vector2 draw(Widget *widget, Vector2 offset, Vector2 area)
 
     int line_x = offset.x + pad_h;
     int line_y = offset.y + pad_v;
+    bool   drew_cursor = false;
     size_t line_offset = 0;
-    size_t line_count = 0;
-    bool drew_cursor = false;
+    size_t  line_count = 0;
     while (GapBufferIter_next(&iter, &line)) {
-            
+
+        drawSelection(input, line, line_x, line_y, line_h, line_offset);
+        
         float line_w = renderString(font, line.str, line.len, 
                                     line_x, line_y, font_size, 
                                     font_color);
@@ -391,15 +418,17 @@ longestSubstringThatRendersInLessPixelsThan(Font font, int font_size,
     return i;
 }
 
-static void manageClick(BufferView *bufview, Vector2 mouse)
+static size_t 
+getOffsetAssociatedToCoordinates(TextInput *input, 
+                                 Vector2 point)
 {
-    GapBuffer *gap = bufview->gap;
+    GapBuffer *gap = input->gap;
 
-    float font_size = bufview->loaded_font_size;
-    float pad_h     = bufview->style->pad_h;
-    float pad_v     = bufview->style->pad_v;
+    float font_size = input->loaded_font_size;
+    float pad_h     = input->style->pad_h;
+    float pad_v     = input->style->pad_v;
 
-    int line_index = (mouse.y - pad_v) / (bufview->style->line_h * font_size);
+    int line_index = (point.y - pad_v) / (input->style->line_h * font_size);
 
     GapBufferLine line;
     GapBufferIter iter;
@@ -414,23 +443,54 @@ static void manageClick(BufferView *bufview, Vector2 mouse)
 
     size_t cursor;
     if (not_last && GapBufferIter_next(&iter, &line))
-        cursor = line_offset + longestSubstringThatRendersInLessPixelsThan(bufview->loaded_font, font_size, // This function name is too long..
-                                                                           line.str, line.len, mouse.x - pad_h);
+        cursor = line_offset + longestSubstringThatRendersInLessPixelsThan(input->loaded_font, font_size, // This function name is too long..
+                                                                           line.str, line.len, point.x - pad_h);
     else
         // If the line index is out of bounds, then the line offset
         // will be the number of bytes in the file, which is an out
         // of bounds index.
         cursor = MIN(line_offset, GapBuffer_getByteCount(gap));
+    return cursor;
+}
+
+static void manageClick(TextInput *input, Vector2 mouse)
+{
+    GapBuffer *gap = input->gap;
+
+    size_t cursor = getOffsetAssociatedToCoordinates(input, mouse);
     GapBuffer_moveAbsoluteRaw(gap, cursor);
+
+    input->selecting = true;
+    input->select_first  = cursor;
+    input->select_second = cursor;
+    setMouseFocus((Widget*) input);
+}
+
+static void removeSelectionAndMoveCursorThere(TextInput *input)
+{
+    if (somethingSelected(input)) {
+
+        GapBuffer *gap = input->gap;
+
+        size_t select_start = MIN(input->select_first, input->select_second);
+        size_t select_end   = MAX(input->select_first, input->select_second);
+                
+        size_t num_selected_bytes = select_end - select_start;
+        GapBuffer_moveAbsolute(gap, input->select_first);
+        GapBuffer_removeForwardsRaw(gap, num_selected_bytes);
+
+        dropSelection(input);
+        input->selecting = false;
+    }
 }
 
 #define MAX_SPACES_PER_TAB 32
 
-static void insertTab(BufferView *bufview)
+static void insertTab(TextInput *input)
 {
-    GapBuffer *gap = bufview->gap;
+    GapBuffer *gap = input->gap;
     
-    int spaces_per_tab = bufview->style->spaces_per_tab;
+    int spaces_per_tab = input->style->spaces_per_tab;
     spaces_per_tab = MAX(spaces_per_tab, 0);
     spaces_per_tab = MIN(spaces_per_tab, MAX_SPACES_PER_TAB);
 
@@ -443,139 +503,96 @@ static void insertTab(BufferView *bufview)
         fprintf(stderr, "Couldn't insert tab\n");
 }
 
-static void manageKey(BufferView *bufview, int key)
+static void manageKey(TextInput *input, int key)
 {
-    GapBuffer *gap = bufview->gap;
+    GapBuffer *gap = input->gap;
 
     switch (key) {
-        case KEY_UP:    GapBuffer_moveRelativeVertically(gap, true);  break;
-        case KEY_DOWN:  GapBuffer_moveRelativeVertically(gap, false); break;
-        case KEY_LEFT:  GapBuffer_moveRelative(gap, -1); break;
-        case KEY_RIGHT: GapBuffer_moveRelative(gap, +1); break;
+        
+        case KEY_UP:
+        dropSelection(input);
+        GapBuffer_moveRelativeVertically(gap, true);
+        break;
+        
+        case KEY_DOWN:
+        dropSelection(input);
+        GapBuffer_moveRelativeVertically(gap, false);
+        break;
+        
+        case KEY_LEFT:
+        dropSelection(input);
+        GapBuffer_moveRelative(gap, -1); 
+        break;
+        
+        case KEY_RIGHT: 
+        dropSelection(input);
+        GapBuffer_moveRelative(gap, +1); 
+        break;
 
         case KEY_ENTER:
-        if (!GapBuffer_insertString(gap, "\n", 1))
-            fprintf(stderr, "Couldn't insert string\n");
         break;
         
-        case KEY_BACKSPACE: 
-        GapBuffer_removeBackwards(gap, 1);
+        case KEY_BACKSPACE:
+        if (somethingSelected(input))
+            removeSelectionAndMoveCursorThere(input);
+        else
+            GapBuffer_removeBackwards(gap, 1); 
+        break;
+        
+        case KEY_DELETE:
+        if (somethingSelected(input))
+            removeSelectionAndMoveCursorThere(input);
+        else
+            GapBuffer_removeForwards(gap, 1);
         break;
 
-        case KEY_TAB: insertTab(bufview); break;
+        case KEY_TAB:
+        if (somethingSelected(input))
+            removeSelectionAndMoveCursorThere(input);
+        else
+            insertTab(input); 
+        break;
     }
-}
-
-static void openFile(BufferView *bufview, const char *filename)
-{
-    assert(filename);
-    
-    size_t filename_len = strlen(filename);
-
-    if (filename_len >= sizeof(bufview->file)) {
-        fprintf(stderr, "File path is too long (longer than the buffer file path limit)\n");
-        return;
-    }
-
-    // Try and open the file into a new gap buffer
-    size_t mem_len = 1 << 16; 
-    void *mem = malloc(mem_len);
-    if (mem == NULL) {
-        fprintf(stderr, "Failed to allocate gap buffer memory to load file\n");
-        return;
-    }
-    GapBuffer *gap = GapBuffer_createUsingMemory(mem, mem_len, free);
-    if (gap == NULL) {
-        fprintf(stderr, "Failed to initialize gap buffer to load file\n");
-        free(mem);
-        return;
-    }
-
-    if (!GapBuffer_insertFile(gap, filename)) {
-        
-        fprintf(stderr, "Failed to load '%s' into gap buffer (file too big or not valid utf-8)\n", filename);
-        
-        // Free the new gap buffer
-        GapBuffer_destroy(gap);
-
-    } else {
-
-        strcpy(bufview->file, filename);
-        fprintf(stderr, "Loaded '%s'\n", filename);
-
-        // Swap the old gap buffer with the new one
-        GapBuffer_destroy(bufview->gap);
-        bufview->gap = gap;
-    }
-}
-
-static bool generateRandomFilename(char *dst, size_t max)
-{
-    size_t len = MIN(16, max);
-
-    char table[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890";
-    
-    for (size_t i = 0; i < len-1; i++) {
-        int k = rand() % (sizeof(table)-1);
-        dst[i] = table[k];
-    }
-    dst[len-1] = '\0';
-
-    // TODO: Make sure this file doesn't exist
-    return true;
-}
-
-static bool associateFilenameToBuffer(BufferView *bufview)
-{
-    assert(bufview->file[0] == '\0');
-    return generateRandomFilename(bufview->file, sizeof(bufview->file));
-}
-
-static void saveFile(BufferView *bufview)
-{
-    if (bufview->file[0] == '\0')
-        if (!associateFilenameToBuffer(bufview))
-            return;
-
-    // Save to a secondary file
-    char second[1024];
-    if (!generateRandomFilename(second, sizeof(second)))
-        return;
-
-    if (!GapBuffer_saveTo(bufview->gap, second)) {
-        fprintf(stderr, "Couldn't save data to file '%s'\n", second);
-        return;
-    }
-
-    // Data was written succesfully to the secondary
-    // file so now we can swap it with the actual
-    // target file.
-    remove(bufview->file);
-    rename(second, bufview->file);
 }
 
 static void handleEvent(Widget *widget, Event event)
 {
-    BufferView *bufview = (BufferView*) widget;
-    GapBuffer *gap = bufview->gap;
+    TextInput *input = (TextInput*) widget;
+    GapBuffer *gap = input->gap;
 
     switch (event.type) {
 
         case EVENT_MOUSE_LEFT_DOWN:
+        SetWindowTitle("SnB");
         setFocus(widget);
-        manageClick(bufview, event.mouse);
+        manageClick(input, event.mouse);
         break;
 
-        case EVENT_OPEN: openFile(bufview, event.path); break;
-        case EVENT_SAVE: saveFile(bufview); break;
+        case EVENT_MOUSE_LEFT_UP:
+        if (input->selecting) {
+            setMouseFocus(NULL);
+            input->selecting = false;
+        }
+        break;
+
+        case EVENT_MOUSE_MOVE:
+        if (input->selecting) {
+            input->select_second = getOffsetAssociatedToCoordinates(input, event.mouse);
+            GapBuffer_moveAbsoluteRaw(gap, input->select_second);
+        }
+        break;
 
         case EVENT_TEXT:
+        removeSelectionAndMoveCursorThere(input);
         if (!GapBuffer_insertRune(gap, event.rune)) 
             fprintf(stderr, "Couldn't insert string\n");
         break;
 
         case EVENT_KEY:
-        manageKey(bufview, event.key);
+        manageKey(input, event.key);
+        break;
+
+        default:
         break;
     }
 }

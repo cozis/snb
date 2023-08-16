@@ -445,6 +445,11 @@ size_t GapBuffer_removeForwards(GapBuffer *buff, size_t num)
     return removed;
 }
 
+void GapBuffer_removeForwardsRaw(GapBuffer *buff, size_t num)
+{
+    buff->gap_length += num;
+}
+
 static void recalculateColumn(GapBuffer *buff)
 {
     bool unused;
@@ -622,6 +627,31 @@ void GapBuffer_moveRelativeVertically(GapBuffer *buff, bool up)
         moveBytesAfterGap(buff, buff->gap_offset - cur);
     else
         moveBytesBeforeGap(buff, cur - (buff->gap_offset + buff->gap_length));
+}
+
+void GapBuffer_copyDataOut(GapBuffer *gap, char *dst, size_t max)
+{
+    String before = getStringBeforeGap(gap);
+    String  after =  getStringAfterGap(gap);
+
+    size_t copied;
+    if (before.size > max) {
+        memcpy(dst, before.data, max);
+        copied = max;
+    } else {
+        memcpy(dst, before.data, before.size);
+        copied = before.size;
+        if (copied + after.size < max) {
+            memcpy(dst + copied, after.data, after.size);
+            copied += after.size;
+        } else {
+            memcpy(dst + copied, after.data, max - copied);
+            copied = max;
+        }
+    }
+    if (copied == max)
+        copied -= 1;
+    dst[copied] = '\0';
 }
 
 void GapBufferIter_init(GapBufferIter *iter, GapBuffer *buff)
