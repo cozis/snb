@@ -7,14 +7,14 @@ static TestResult
 run_get_str_test(void)
 {
     CfgEntry entries[] = {
-        {.key = "keyA", .type = CFG_TYPE_STR, .val.str = "foobar"},
-        {.key = "keyC", .type = CFG_TYPE_BOOL, .val.bool_ = true},
+        {.key = "keyA", .type = CFG_TYPE_STRING, .val.string = "foobar"},
+        {.key = "keyC", .type = CFG_TYPE_BOOL, .val.boolean = true},
     };
     Cfg cfg = WRAP(entries);
 
-    ASSERT(0 == strcmp("foobar", cfg_get_str(&cfg, "keyA", "barfoo")));
-    ASSERT(0 == strcmp("barfoo", cfg_get_str(&cfg, "keyB", "barfoo")));
-    ASSERT(0 == strcmp("barfoo", cfg_get_str(&cfg, "keyC", "barfoo")));
+    ASSERT(0 == strcmp("foobar", cfg_get_string(&cfg, "keyA", "barfoo")));
+    ASSERT(0 == strcmp("barfoo", cfg_get_string(&cfg, "keyB", "barfoo")));
+    ASSERT(0 == strcmp("barfoo", cfg_get_string(&cfg, "keyC", "barfoo")));
 
     return OK;
 }
@@ -23,7 +23,7 @@ static TestResult
 run_get_bool_test(void)
 {
     CfgEntry entries[] = {
-        {.key = "key", .type = CFG_TYPE_BOOL, .val.bool_ = true},
+        {.key = "key", .type = CFG_TYPE_BOOL, .val.boolean = true},
     };
     Cfg cfg = WRAP(entries);
 
@@ -36,7 +36,7 @@ static TestResult
 run_get_int_test(void)
 {
     CfgEntry entries[] = {
-        {.key = "key", .type = CFG_TYPE_INT, .val.int_ = 16},
+        {.key = "key", .type = CFG_TYPE_INT, .val.integer = 16},
     };
     Cfg cfg = WRAP(entries);
 
@@ -59,7 +59,7 @@ static TestResult
 run_get_float_test(void)
 {
     CfgEntry entries[] = {
-        {.key = "key", .type = CFG_TYPE_FLOAT, .val.float_ = 16},
+        {.key = "key", .type = CFG_TYPE_FLOAT, .val.floating = 16},
     };
     Cfg cfg = WRAP(entries);
 

@@ -29,7 +29,7 @@ main(int argc, char *argv[])
         return 1;
     }
 
-    char *font = cfg_get_str(&cfg, "font", "Noto Sans Mono");
+    char *font = cfg_get_string(&cfg, "font", "Noto Sans Mono");
     int font_size = cfg_get_int(&cfg, "font.size", 12);
     float zoom = cfg_get_float(&cfg, "zoom", 1.0);
     bool line_num = cfg_get_bool(&cfg, "lineNumbers", true);

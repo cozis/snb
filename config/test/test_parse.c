@@ -66,8 +66,8 @@ static const TestCase test_cases[] = {
         .expected_entries =
             (CfgEntry[]){
                 {.key = "key",
-                 .type = CFG_TYPE_STR,
-                 .val.str = "hello, world!"},
+                 .type = CFG_TYPE_STRING,
+                 .val.string = "hello, world!"},
             },
         .expected_count = 1,
     },
@@ -78,7 +78,7 @@ static const TestCase test_cases[] = {
         .capacity = TEST_CAPACITY,
         .expected_entries =
             (CfgEntry[]){
-                {.key = "key", .type = CFG_TYPE_INT, .val.int_ = 10},
+                {.key = "key", .type = CFG_TYPE_INT, .val.integer = 10},
             },
         .expected_count = 1,
     },
@@ -89,7 +89,7 @@ static const TestCase test_cases[] = {
         .capacity = TEST_CAPACITY,
         .expected_entries =
             (CfgEntry[]){
-                {.key = "key", .type = CFG_TYPE_INT, .val.int_ = -1},
+                {.key = "key", .type = CFG_TYPE_INT, .val.integer = -1},
             },
         .expected_count = 1,
     },
@@ -100,7 +100,7 @@ static const TestCase test_cases[] = {
         .capacity = TEST_CAPACITY,
         .expected_entries =
             (CfgEntry[]){
-                {.key = "key", .type = CFG_TYPE_BOOL, .val.bool_ = true},
+                {.key = "key", .type = CFG_TYPE_BOOL, .val.boolean = true},
             },
         .expected_count = 1,
     },
@@ -111,7 +111,7 @@ static const TestCase test_cases[] = {
         .capacity = TEST_CAPACITY,
         .expected_entries =
             (CfgEntry[]){
-                {.key = "key", .type = CFG_TYPE_BOOL, .val.bool_ = false},
+                {.key = "key", .type = CFG_TYPE_BOOL, .val.boolean = false},
             },
         .expected_count = 1,
     },
@@ -136,7 +136,7 @@ static const TestCase test_cases[] = {
         .capacity = TEST_CAPACITY,
         .expected_entries =
             (CfgEntry[]){
-                {.key = "key", .type = CFG_TYPE_FLOAT, .val.float_ = 0.5},
+                {.key = "key", .type = CFG_TYPE_FLOAT, .val.floating = 0.5},
             },
         .expected_count = 1,
     },
@@ -147,7 +147,7 @@ static const TestCase test_cases[] = {
         .capacity = TEST_CAPACITY,
         .expected_entries =
             (CfgEntry[]){
-                {.key = "key_", .type = CFG_TYPE_BOOL, .val.bool_ = true},
+                {.key = "key_", .type = CFG_TYPE_BOOL, .val.boolean = true},
             },
         .expected_count = 1,
     },
@@ -158,7 +158,7 @@ static const TestCase test_cases[] = {
         .capacity = TEST_CAPACITY,
         .expected_entries =
             (CfgEntry[]){
-                {.key = "key.", .type = CFG_TYPE_BOOL, .val.bool_ = true},
+                {.key = "key.", .type = CFG_TYPE_BOOL, .val.boolean = true},
             },
         .expected_count = 1,
     },
@@ -169,8 +169,8 @@ static const TestCase test_cases[] = {
         .capacity = TEST_CAPACITY,
         .expected_entries =
             (CfgEntry[]){
-                {.key = "a", .type = CFG_TYPE_BOOL, .val.bool_ = true},
-                {.key = "b", .type = CFG_TYPE_BOOL, .val.bool_ = true},
+                {.key = "a", .type = CFG_TYPE_BOOL, .val.boolean = true},
+                {.key = "b", .type = CFG_TYPE_BOOL, .val.boolean = true},
             },
         .expected_count = 2,
     },
@@ -181,7 +181,7 @@ static const TestCase test_cases[] = {
         .capacity = TEST_CAPACITY,
         .expected_entries =
             (CfgEntry[]){
-                {.key = "key", .type = CFG_TYPE_FLOAT, .val.float_ = 1.0},
+                {.key = "key", .type = CFG_TYPE_FLOAT, .val.floating = 1.0},
             },
         .expected_count = 1,
     },
@@ -446,20 +446,20 @@ assert_eq_entry(const CfgEntry *expected, const CfgEntry *actual)
     ASSERT(0 == strcmp(expected->key, actual->key));
 
     switch (expected->type) {
-    case CFG_TYPE_STR:
-        ASSERT(0 == strcmp(expected->val.str, actual->val.str));
+    case CFG_TYPE_STRING:
+        ASSERT(0 == strcmp(expected->val.string, actual->val.string));
         break;
 
     case CFG_TYPE_INT:
-        ASSERT(expected->val.int_ == actual->val.int_);
+        ASSERT(expected->val.integer == actual->val.integer);
         break;
 
     case CFG_TYPE_FLOAT:
-        ASSERT(expected->val.float_ == actual->val.float_);
+        ASSERT(expected->val.floating == actual->val.floating);
         break;
 
     case CFG_TYPE_BOOL:
-        ASSERT(expected->val.bool_ == actual->val.bool_);
+        ASSERT(expected->val.boolean == actual->val.boolean);
         break;
 
     case CFG_TYPE_COLOR:

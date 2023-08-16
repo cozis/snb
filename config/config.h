@@ -34,7 +34,7 @@ typedef struct {
 } CfgColor;
 
 typedef enum {
-    CFG_TYPE_STR,
+    CFG_TYPE_STRING,
     CFG_TYPE_BOOL,
     CFG_TYPE_INT,
     CFG_TYPE_FLOAT,
@@ -42,10 +42,10 @@ typedef enum {
 } CfgValType;
 
 typedef union {
-    char str[CFG_MAX_VAL + 1];
-    bool bool_;
-    int int_;
-    float float_;
+    char string[CFG_MAX_VAL + 1];
+    bool boolean;
+    int integer;
+    float floating;
     CfgColor color;
 } CfgVal;
 
@@ -86,25 +86,25 @@ int cfg_parse(const char *src, int src_len, Cfg *cfg, CfgError *err);
  */
 int cfg_load(const char *filename, Cfg *cfg, CfgError *err);
 
-char *cfg_get_str(Cfg *cfg, const char *key, char *default_);
-bool cfg_get_bool(Cfg *cfg, const char *key, bool default_);
-int cfg_get_int(Cfg *cfg, const char *key, int default_);
-float cfg_get_float(Cfg *cfg, const char *key, float default_);
-CfgColor cfg_get_color(Cfg *cfg, const char *key, CfgColor default_);
+char *cfg_get_string(Cfg *cfg, const char *key, char *fallback);
+bool cfg_get_bool(Cfg *cfg, const char *key, bool fallback);
+int cfg_get_int(Cfg *cfg, const char *key, int fallback);
+float cfg_get_float(Cfg *cfg, const char *key, float fallback);
+CfgColor cfg_get_color(Cfg *cfg, const char *key, CfgColor fallback);
 
-int cfg_get_int_min(Cfg *cfg, const char *key, int default_, int min);
-int cfg_get_int_max(Cfg *cfg, const char *key, int default_, int max);
+int cfg_get_int_min(Cfg *cfg, const char *key, int fallback, int min);
+int cfg_get_int_max(Cfg *cfg, const char *key, int fallback, int max);
 int cfg_get_int_range(Cfg *cfg,
                       const char *key,
-                      int default_,
+                      int fallback,
                       int min,
                       int max);
 
-float cfg_get_float_min(Cfg *cfg, const char *key, float default_, float min);
-float cfg_get_float_max(Cfg *cfg, const char *key, float default_, float max);
+float cfg_get_float_min(Cfg *cfg, const char *key, float fallback, float min);
+float cfg_get_float_max(Cfg *cfg, const char *key, float fallback, float max);
 float cfg_get_float_range(Cfg *cfg,
                           const char *key,
-                          float default_,
+                          float fallback,
                           float min,
                           float max);
 

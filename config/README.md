@@ -34,7 +34,7 @@ main(void)
     // Default value         --------------------+
     // (if key is not found)                     |
     //                                           v
-    char* font = cfg_get_str(&cfg, "font", "Noto Sans Mono");
+    char* font = cfg_get_string(&cfg, "font", "Noto Sans Mono");
     int font_size = cfg_get_int(&cfg, "font.size", 12);
     float zoom = cfg_get_float(&cfg, "zoom", 1.0);
     bool line_num = cfg_get_bool(&cfg, "line_numbers", true);
@@ -82,23 +82,23 @@ A fully working example can be found in `example.c`, to build it just run `make`
 ## EBNF grammar
 
 ```
-cfg   ::= line*
-line  ::= key ':' val '\n'
-key   ::= (alpha | '.' | '_')+
-val   ::= str | bool | int | float | color
+cfg    ::= line*
+line   ::= key ':' val '\n'
+key    ::= (alpha | '.' | '_')+
+val    ::= string | bool | int | float | color
 
-str   ::= '"' (alpha | punct | digit | blank)+ '"'
-alpha ::= 'a' ... 'z' | 'A' ... 'Z'
-punct ::= '.' | ':' | '~' | '!' | ...
-blank ::= ' ' | '\t'
+string ::= '"' (alpha | punct | digit | blank)+ '"'
+alpha  ::= 'a' ... 'z' | 'A' ... 'Z'
+punct  ::= '.' | ':' | '~' | '!' | ...
+blank  ::= ' ' | '\t'
 
-bool  ::= true | false
+bool   ::= true | false
 
-int   ::= '-'? digit+
-float ::= '-'? digit+ '.' digit+
-digit ::= '0' ... '9'
+int    ::= '-'? digit+
+float  ::= '-'? digit+ '.' digit+
+digit  ::= '0' ... '9'
 
-color ::= 'rgba(' digit+ ',' digit+ ',' digit+ ',' digit+ ')'
+color  ::= 'rgba(' digit+ ',' digit+ ',' digit+ ',' digit+ ')'
 ```
 
 ## Acknowledgements
