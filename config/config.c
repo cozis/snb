@@ -123,7 +123,7 @@ is_string(char ch)
 }
 
 static void
-init_error(CfgError *err)
+init_error(ConfigError *err)
 {
     err->off = -1;
     err->col = -1;
@@ -132,7 +132,7 @@ init_error(CfgError *err)
 }
 
 static int
-error(Scanner *s, CfgError *err, const char *fmt, ...)
+error(Scanner *s, ConfigError *err, const char *fmt, ...)
 {
     const char prefix[] = "";
     const int prefix_len = sizeof(prefix) - 1;
@@ -148,120 +148,25 @@ error(Scanner *s, CfgError *err, const char *fmt, ...)
         }
     }
 
-#ifdef CFG_DETAILED_ERRORS
-    {
-        const char *src = s->src;
-
-        // Get line offset containing the error's location
-        int line_off = cur(s);
-
-        while (line_off > 0) {
-            if (src[line_off - 1] == '\n')
-                break;
-            line_off--;
-        }
-
-        int line_len = 0;
-        for (int i = line_off; i < s->len; i++) {
-            if (src[i] == '\n') {
-                if (i > 0 && src[i - 1] == '\r')
-                    line_len--;
-                break;
-            }
-            line_len++;
-        }
-
-        int prev_line_off;
-        int prev_line_len;
-
-        if (line_off == 0) {
-            prev_line_off = 0;
-            prev_line_len = 0;
-        } else {
-            prev_line_off = line_off - 1;
-            while (prev_line_off > 0) {
-                if (src[prev_line_off - 1] == '\n')
-                    break;
-                prev_line_off--;
-            }
-            prev_line_len = line_off - prev_line_off - 1;
-        }
-
-        int next_line_off;
-        int next_line_len;
-
-        if (line_off + line_len == s->len) {
-            next_line_off = 0;
-            next_line_len = 0;
-        } else {
-            next_line_off = line_off + line_len + 1;
-            if (src[next_line_off] == '\n')
-                next_line_off++;
-            next_line_len = 0;
-            while (next_line_off + next_line_len < s->len &&
-                   src[next_line_off + next_line_len] != '\n')
-                next_line_len++;
-        }
-
-        err->truncated[0] = false;
-        err->truncated[1] = false;
-        err->truncated[2] = false;
-
-        if (prev_line_len >= (int) sizeof(err->lines[0])) {
-            prev_line_len = (int) sizeof(err->lines[0]) - 1;
-            err->truncated[0] = true;
-        }
-
-        if (line_len >= (int) sizeof(err->lines[1])) {
-            line_len = (int) sizeof(err->lines[1]) - 1;
-            err->truncated[1] = true;
-        }
-
-        if (next_line_len >= (int) sizeof(err->lines[2])) {
-            next_line_len = (int) sizeof(err->lines[2]) - 1;
-            err->truncated[2] = true;
-        }
-
-        memcpy(err->lines[0], src + prev_line_off, prev_line_len);
-        memcpy(err->lines[1], src + line_off, line_len);
-        memcpy(err->lines[2], src + next_line_off, next_line_len);
-        err->lines[0][prev_line_len] = '\0';
-        err->lines[1][line_len] = '\0';
-        err->lines[2][next_line_len] = '\0';
-    }
-#endif
-
     va_list vargs;
     va_start(vargs, fmt);
-    snprintf(err->msg, CFG_MAX_ERR, prefix);
-    vsnprintf(err->msg + prefix_len, CFG_MAX_ERR - prefix_len, fmt, vargs);
+    snprintf(err->msg, CONFIG_MAX_ERR, prefix);
+    vsnprintf(err->msg + prefix_len, CONFIG_MAX_ERR - prefix_len, fmt, vargs);
     va_end(vargs);
     return -1;
 }
 
 void
-cfg_fprint_error(FILE *stream, CfgError *err)
+config_fprint_error(FILE *stream, ConfigError *err)
 {
     if (err->row == -1 && err->col == -1)
         fprintf(stream, "Error: %s\n", err->msg);
     else
         fprintf(stream, "Error at %d:%d :: %s\n", err->row, err->col, err->msg);
-
-#ifdef CFG_DETAILED_ERRORS
-    fprintf(stream, "\n");
-    if (err->row > 0)
-        fprintf(stream, "%4d | %s %s\n", err->row - 1, err->lines[0],
-                err->truncated[0] ? "[...]" : "");
-    fprintf(stream, "%4d | %s %s <------ Error is here!\n", err->row,
-            err->lines[1], err->truncated[1] ? "[...]" : "");
-    fprintf(stream, "%4d | %s %s\n", err->row + 1, err->lines[2],
-            err->truncated[2] ? "[...]" : "");
-    fprintf(stream, "\n");
-#endif
 }
 
 static int
-parse_string(Scanner *s, CfgEntry *entry, CfgError *err)
+parse_string(Scanner *s, ConfigEntry *entry, ConfigError *err)
 {
     // Consume opening '"'
     advance(s);
@@ -275,7 +180,7 @@ parse_string(Scanner *s, CfgEntry *entry, CfgError *err)
         return error(s, err, "closing '\"' expected");
 
     int val_len = cur(s) - val_offset;
-    if (val_len > CFG_MAX_VAL)
+    if (val_len > CONFIG_MAX_VAL)
         return error(s, err, "value too long");
 
     // Consume closing '"'
@@ -283,7 +188,7 @@ parse_string(Scanner *s, CfgEntry *entry, CfgError *err)
 
     copy_slice_into(s, val_offset, val_len, entry->val.string,
                     sizeof(entry->val.string));
-    entry->type = CFG_TYPE_STRING;
+    entry->type = CONFIG_TYPE_STRING;
     return 0;
 }
 
@@ -330,7 +235,7 @@ consume_number(Scanner *s, float *number, bool *is_int)
 }
 
 static int
-parse_number(Scanner *s, CfgEntry *entry, CfgError *err)
+parse_number(Scanner *s, ConfigEntry *entry, ConfigError *err)
 {
     bool is_int;
     float number;
@@ -339,17 +244,17 @@ parse_number(Scanner *s, CfgEntry *entry, CfgError *err)
 
     if (is_int) {
         entry->val.integer = (int) number;
-        entry->type = CFG_TYPE_INT;
+        entry->type = CONFIG_TYPE_INT;
     } else {
         entry->val.floating = number;
-        entry->type = CFG_TYPE_FLOAT;
+        entry->type = CONFIG_TYPE_FLOAT;
     }
 
     return 0;
 }
 
 static int
-parse_rgba(Scanner *s, CfgEntry *entry, CfgError *err)
+parse_rgba(Scanner *s, ConfigEntry *entry, ConfigError *err)
 {
     if (!match_literal(s, cur(s), "rgba", 4))
         return error(s, err, "invalid literal");
@@ -412,19 +317,19 @@ parse_rgba(Scanner *s, CfgEntry *entry, CfgError *err)
     // Consume ')'
     advance(s);
 
-    CfgColor color = {
+    ConfigColor color = {
         .r = rgb[0],
         .g = rgb[1],
         .b = rgb[2],
         .a = (uint8_t) (alpha * 255),
     };
     entry->val.color = color;
-    entry->type = CFG_TYPE_COLOR;
+    entry->type = CONFIG_TYPE_COLOR;
     return 0;
 }
 
 static int
-parse_true(Scanner *s, CfgEntry *entry, CfgError *err)
+parse_true(Scanner *s, ConfigEntry *entry, ConfigError *err)
 {
     if (!match_literal(s, cur(s), "true", 4))
         return error(s, err, "invalid literal");
@@ -433,12 +338,12 @@ parse_true(Scanner *s, CfgEntry *entry, CfgError *err)
     advance2(s, 4);
 
     entry->val.boolean = true;
-    entry->type = CFG_TYPE_BOOL;
+    entry->type = CONFIG_TYPE_BOOL;
     return 0;
 }
 
 static int
-parse_false(Scanner *s, CfgEntry *entry, CfgError *err)
+parse_false(Scanner *s, ConfigEntry *entry, ConfigError *err)
 {
     if (!match_literal(s, cur(s), "false", 5))
         return error(s, err, "invalid literal");
@@ -447,12 +352,12 @@ parse_false(Scanner *s, CfgEntry *entry, CfgError *err)
     advance2(s, 5);
 
     entry->val.boolean = false;
-    entry->type = CFG_TYPE_BOOL;
+    entry->type = CONFIG_TYPE_BOOL;
     return 0;
 }
 
 static int
-parse_literal(Scanner *s, CfgEntry *entry, CfgError *err)
+parse_literal(Scanner *s, ConfigEntry *entry, ConfigError *err)
 {
     switch (peek(s)) {
     case 't':
@@ -467,7 +372,7 @@ parse_literal(Scanner *s, CfgEntry *entry, CfgError *err)
 }
 
 static int
-parse_value(Scanner *s, CfgEntry *entry, CfgError *err)
+parse_value(Scanner *s, ConfigEntry *entry, ConfigError *err)
 {
     // Skip blank space between ':' and the value
     skip_blank(s);
@@ -489,7 +394,7 @@ parse_value(Scanner *s, CfgEntry *entry, CfgError *err)
 }
 
 static int
-parse_key(Scanner *s, CfgEntry *entry, CfgError *err)
+parse_key(Scanner *s, ConfigEntry *entry, ConfigError *err)
 {
     if (is_at_end(s) || !is_key(peek(s)))
         return error(s, err, "missing key");
@@ -501,7 +406,7 @@ parse_key(Scanner *s, CfgEntry *entry, CfgError *err)
     while (!is_at_end(s) && is_key(peek(s)));
     int key_len = cur(s) - key_offset;
 
-    if (key_len > CFG_MAX_KEY)
+    if (key_len > CONFIG_MAX_KEY)
         return error(s, err, "key too long");
 
     copy_slice_into(s, key_offset, key_len, entry->key, sizeof(entry->key));
@@ -509,7 +414,7 @@ parse_key(Scanner *s, CfgEntry *entry, CfgError *err)
 }
 
 static int
-consume_colon(Scanner *s, CfgError *err)
+consume_colon(Scanner *s, ConfigError *err)
 {
     // Skip blank space between the key and ':'
     skip_blank(s);
@@ -523,7 +428,7 @@ consume_colon(Scanner *s, CfgError *err)
 }
 
 static int
-parse_entry(Scanner *s, CfgEntry *entry, CfgError *err)
+parse_entry(Scanner *s, ConfigEntry *entry, ConfigError *err)
 {
     if (parse_key(s, entry, err) != 0)
         return -1;
@@ -551,26 +456,30 @@ parse_entry(Scanner *s, CfgEntry *entry, CfgError *err)
 }
 
 int
-cfg_parse(const char *src, int src_len, Cfg *cfg, CfgError *err)
+Config_parse(const char *src,
+             int src_len,
+             ConfigEntry *entries,
+             int max_entries,
+             ConfigError *err)
 {
     Scanner s;
     init_scanner(&s, src, src_len);
     init_error(err);
 
-    cfg->count = 0;
+    int count = 0;
     skip_whitespace_and_comments(&s);
 
-    while (!is_at_end(&s) && cfg->count < cfg->capacity) {
-        CfgEntry *entry = &cfg->entries[cfg->count];
+    while (!is_at_end(&s) && count < max_entries) {
+        ConfigEntry *entry = &entries[count];
 
         if (parse_entry(&s, entry, err) != 0)
             return -1;
 
-        cfg->count++;
+        count++;
         skip_whitespace_and_comments(&s);
     }
 
-    return 0;
+    return count;
 }
 
 static char *
@@ -578,7 +487,7 @@ read_file(const char *filename, int *count, char *err)
 {
     FILE *file = fopen(filename, "rb");
     if (!file) {
-        snprintf(err, CFG_MAX_ERR, "failed to open file");
+        snprintf(err, CONFIG_MAX_ERR, "failed to open file");
         return NULL;
     }
 
@@ -588,7 +497,7 @@ read_file(const char *filename, int *count, char *err)
 
     char *src = malloc(file_size + 1);
     if (src == NULL) {
-        snprintf(err, CFG_MAX_ERR, "memory allocation failed");
+        snprintf(err, CONFIG_MAX_ERR, "memory allocation failed");
         return NULL;
     }
 
@@ -597,7 +506,7 @@ read_file(const char *filename, int *count, char *err)
 
     if (bytes_read != file_size) {
         free(src);
-        snprintf(err, CFG_MAX_ERR, "failed to read file");
+        snprintf(err, CONFIG_MAX_ERR, "failed to read file");
         return NULL;
     }
 
@@ -606,19 +515,22 @@ read_file(const char *filename, int *count, char *err)
 }
 
 int
-cfg_load(const char *filename, Cfg *cfg, CfgError *err)
+Config_parseFile(const char *filename,
+                 ConfigEntry *entries,
+                 int max_entries,
+                 ConfigError *err)
 {
     init_error(err);
 
     size_t len = strlen(filename);
     if (len < 5) {
-        snprintf(err->msg, CFG_MAX_ERR, "invalid filename");
+        snprintf(err->msg, CONFIG_MAX_ERR, "invalid filename");
         return -1;
     }
 
-    const char *ext = filename + (len - strlen(CFG_FILE_EXT));
-    if (strcmp(ext, CFG_FILE_EXT) != 0) {
-        snprintf(err->msg, CFG_MAX_ERR, "invalid file extension");
+    const char *ext = filename + (len - strlen(CONFIG_FILE_EXT));
+    if (strcmp(ext, CONFIG_FILE_EXT) != 0) {
+        snprintf(err->msg, CONFIG_MAX_ERR, "invalid file extension");
         return -1;
     }
 
@@ -627,134 +539,19 @@ cfg_load(const char *filename, Cfg *cfg, CfgError *err)
     if (src == NULL)
         return -1;
 
-    int res = cfg_parse(src, src_len, cfg, err);
+    int res = Config_parse(src, src_len, entries, max_entries, err);
 
     free(src);
     return res;
 }
 
-static void *
-get_val(Cfg *cfg, const char *key, void *fallback, CfgValType type)
+ConfigEntry *
+Config_getEntry(ConfigEntry *entries, int count, const char *key)
 {
-    for (int i = cfg->count - 1; i >= 0; i--) {
-        if (cfg->entries[i].type == type && !strcmp(key, cfg->entries[i].key))
-            return &(cfg->entries[i].val);
+    for (int i = 0; i < count; i++) {
+        if (!strcmp(key, entries[i].key))
+            return &entries[i];
     }
-    return fallback;
-}
 
-char *
-cfg_get_string(Cfg *cfg, const char *key, char *fallback)
-{
-    return (char *) get_val(cfg, key, fallback, CFG_TYPE_STRING);
-}
-
-bool
-cfg_get_bool(Cfg *cfg, const char *key, bool fallback)
-{
-    return *(bool *) get_val(cfg, key, &fallback, CFG_TYPE_BOOL);
-}
-
-int
-cfg_get_int(Cfg *cfg, const char *key, int fallback)
-{
-    return *(int *) get_val(cfg, key, &fallback, CFG_TYPE_INT);
-}
-
-int
-cfg_get_int_min(Cfg *cfg, const char *key, int fallback, int min)
-{
-    int value = cfg_get_int(cfg, key, fallback);
-    if (value < min)
-        value = fallback;
-    return value;
-}
-
-int
-cfg_get_int_max(Cfg *cfg, const char *key, int fallback, int max)
-{
-    int value = cfg_get_int(cfg, key, fallback);
-    if (value > max)
-        value = fallback;
-    return value;
-}
-
-int
-cfg_get_int_range(Cfg *cfg, const char *key, int fallback, int min, int max)
-{
-    int value = cfg_get_int(cfg, key, fallback);
-    if (value < min || value > max)
-        value = fallback;
-    return value;
-}
-
-float
-cfg_get_float(Cfg *cfg, const char *key, float fallback)
-{
-    return *(float *) get_val(cfg, key, &fallback, CFG_TYPE_FLOAT);
-}
-
-float
-cfg_get_float_min(Cfg *cfg, const char *key, float fallback, float min)
-{
-    float value = cfg_get_float(cfg, key, fallback);
-    if (value < min)
-        value = fallback;
-    return value;
-}
-
-float
-cfg_get_float_max(Cfg *cfg, const char *key, float fallback, float max)
-{
-    float value = cfg_get_float(cfg, key, fallback);
-    if (value > max)
-        value = fallback;
-    return value;
-}
-
-float
-cfg_get_float_range(Cfg *cfg,
-                    const char *key,
-                    float fallback,
-                    float min,
-                    float max)
-{
-    float value = cfg_get_float(cfg, key, fallback);
-    if (value < min || value > max)
-        value = fallback;
-    return value;
-}
-
-CfgColor
-cfg_get_color(Cfg *cfg, const char *key, CfgColor fallback)
-{
-    return *(CfgColor *) get_val(cfg, key, &fallback, CFG_TYPE_COLOR);
-}
-
-void
-cfg_fprint(FILE *stream, Cfg *cfg)
-{
-    for (int i = 0; i < cfg->count; i++) {
-        fprintf(stream, "%s: ", cfg->entries[i].key);
-
-        switch (cfg->entries[i].type) {
-        case CFG_TYPE_STRING:
-            fprintf(stream, "\"%s\"\n", cfg->entries[i].val.string);
-            break;
-        case CFG_TYPE_BOOL:
-            fprintf(stream, "%s\n",
-                    cfg->entries[i].val.boolean ? "true" : "false");
-            break;
-        case CFG_TYPE_INT:
-            fprintf(stream, "%d\n", cfg->entries[i].val.integer);
-            break;
-        case CFG_TYPE_FLOAT:
-            fprintf(stream, "%f\n", cfg->entries[i].val.floating);
-            break;
-        case CFG_TYPE_COLOR:;
-            CfgColor c = cfg->entries[i].val.color;
-            fprintf(stream, "rgba(%d, %d, %d, %d)\n", c.r, c.g, c.b, c.a);
-            break;
-        }
-    }
+    return NULL;
 }
