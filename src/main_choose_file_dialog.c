@@ -301,6 +301,8 @@ int chooseFileDialog(int argc, char **argv)
     const char *title = save ? "SnB - Save file" : "SnB - Open file";
     InitWindow(720, 500, title);
 
+    loadStyleFrom("style.cfg");
+    
     float spacing  = 10;
     float input_h  = 30;
     float button_w = 100;

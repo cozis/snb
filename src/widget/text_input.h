@@ -12,14 +12,14 @@ typedef struct {
     int spaces_per_tab;
     Color color_cursor;
     Color color_text;
-    const char *font_path;
+    const char *font_file;
     float       font_size;
 } TextInputStyle;
 
 typedef struct {
     Widget base;
     TextInputStyle *style;
-    const char *loaded_font_path;
+    const char *loaded_font_file;
     float       loaded_font_size;
     Font        loaded_font;
     bool        selecting;

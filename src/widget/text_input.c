@@ -211,7 +211,7 @@ TextInput *createTextInput(WidgetStyle *base_style, TextInputStyle *style)
 
     initWidget(&input->base, base_style, draw, free_, handleEvent);
     input->style = style;
-    input->loaded_font_path = NULL;
+    input->loaded_font_file = NULL;
     input->loaded_font_size = 14;
     input->loaded_font = GetFontDefault();
     input->selecting = false;
@@ -232,27 +232,27 @@ static void free_(Widget *widget)
 
 static void reloadFont(TextInput *input)
 {
-    const char *font_path = input->style->font_path;
+    const char *font_file = input->style->font_file;
     float       font_size = input->style->font_size;
 
     Font font;
-    if (input->style->font_path)
-        font = LoadFontEx(font_path, font_size, NULL, 250);
+    if (input->style->font_file)
+        font = LoadFontEx(font_file, font_size, NULL, 250);
     else
         font = GetFontDefault();
 
     UnloadFont(input->loaded_font); // FIXME: Is it okay to unload the default font?
     input->loaded_font = font;
-    input->loaded_font_path = font_path;
+    input->loaded_font_file = font_file;
     input->loaded_font_size = font_size;
 }
 
 static void reloadStyleIfChanged(TextInput *input)
 {
     if (input->style) {
-        bool changed_font_path = (input->style->font_path != input->loaded_font_path);
+        bool changed_font_file = (input->style->font_file != input->loaded_font_file);
         bool changed_font_size = (input->style->font_size != input->loaded_font_size);
-        if (changed_font_path || changed_font_size)
+        if (changed_font_file || changed_font_size)
             reloadFont(input);
     }
 }
