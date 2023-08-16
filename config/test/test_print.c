@@ -27,10 +27,9 @@ run_test(const char *expected, void *arg, bool is_error)
 TestResult
 run_print_test()
 {
-    Cfg cfg;
     CfgError err;
-    CfgEntry entries[32];
-    cfg_init(&cfg, entries, 32);
+    CfgEntry entries[TEST_CAPACITY];
+    Cfg cfg = {.entries = entries, .capacity = TEST_CAPACITY};
 
     static const char expected[] = "font: \"JetBrainsMono Nerd Font\"\n"
                                    "font.size: 14\n"
@@ -56,10 +55,9 @@ run_print_test()
 TestResult
 run_error_test_1()
 {
-    Cfg cfg;
     CfgError err;
     CfgEntry entries[TEST_CAPACITY];
-    cfg_init(&cfg, entries, TEST_CAPACITY);
+    Cfg cfg = {.entries = entries, .capacity = TEST_CAPACITY};
 
     int res = cfg_load("", &cfg, &err);
     if (res == 0)
@@ -71,10 +69,9 @@ run_error_test_1()
 TestResult
 run_error_test_2()
 {
-    Cfg cfg;
     CfgError err;
-    CfgEntry entries[32];
-    cfg_init(&cfg, entries, 32);
+    CfgEntry entries[TEST_CAPACITY];
+    Cfg cfg = {.entries = entries, .capacity = TEST_CAPACITY};
 
     static const char *src = "a:true\nb:";
 

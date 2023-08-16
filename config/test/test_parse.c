@@ -479,17 +479,17 @@ assert_eq_entries(const TestCase tc, const CfgEntry *actual_entries)
 static TestResult
 run_test_case(TestCase tc)
 {
-    Cfg cfg;
-    CfgEntry entries[TEST_CAPACITY];
-
     assert(tc.capacity <= TEST_CAPACITY);
-    cfg_init(&cfg, entries, tc.capacity);
 
     CfgError err;
+    CfgEntry entries[TEST_CAPACITY];
+    Cfg cfg = {.entries = entries, .capacity = tc.capacity};
+
     int res = cfg_parse(tc.src, strlen(tc.src), &cfg, &err);
 
     switch (tc.type) {
     case TC_SUCC:
+        cfg_fprint_error(stdout, &err);
         ASSERT(res == 0);
         ASSERT(tc.expected_count == cfg.count);
         return assert_eq_entries(tc, cfg.entries);

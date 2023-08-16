@@ -62,15 +62,6 @@ typedef struct {
 } Cfg;
 
 /**
- * @brief Initializes a Cfg object
- *
- * @param[out] cfg The Cfg object to be initialized
- * @param[in] entries The array that will contain the parsed entries
- * @param[in] capacity The maximum number of entries the array can hold
- */
-void cfg_init(Cfg *cfg, CfgEntry *entries, int capacity);
-
-/**
  * @brief Parses the source data and populates the Cfg object
  *
  * @param[in] src The source data

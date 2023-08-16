@@ -549,14 +549,6 @@ parse_entry(Scanner *s, CfgEntry *entry, CfgError *err)
     return 0;
 }
 
-void
-cfg_init(Cfg *cfg, CfgEntry *entries, int capacity)
-{
-    cfg->entries = entries;
-    cfg->count = 0;
-    cfg->capacity = capacity;
-}
-
 int
 cfg_parse(const char *src, int src_len, Cfg *cfg, CfgError *err)
 {

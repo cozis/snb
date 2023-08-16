@@ -19,11 +19,10 @@ bg.color: rgba(255, 255, 255, 1)
 int
 main(void)
 {
-    Cfg cfg;
-    CfgEntry *entries = malloc(64 * sizeof(CfgEntry));
-    cfg_init(&cfg, entries, 64);
-
     CfgError err;
+    CfgEntry *entries = malloc(64 * sizeof(CfgEntry));
+    Cfg cfg = {.entries = entries, .capacity = TEST_CAPACITY};
+
     int res = cfg_load("sample.cfg", &cfg, &err);
 
     if (res != 0) {

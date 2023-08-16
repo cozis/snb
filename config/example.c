@@ -13,17 +13,14 @@ main(int argc, char *argv[])
     }
 
     int capacity = 64;
-    Cfg cfg;
     CfgEntry *entries = malloc(capacity * sizeof(CfgEntry));
-
     if (entries == NULL) {
         fprintf(stderr, "Error: memory allocation failed\n");
         return 1;
     }
 
-    cfg_init(&cfg, entries, capacity);
-
     CfgError err;
+    Cfg cfg = {.entries = entries, .capacity = capacity};
     int res = cfg_load(argv[1], &cfg, &err);
 
     if (res != 0) {

@@ -6,11 +6,9 @@
 static TestResult
 run_load_test(void)
 {
-    Cfg cfg;
-    CfgEntry entries[TEST_CAPACITY];
-    cfg_init(&cfg, entries, TEST_CAPACITY);
-
     CfgError err;
+    CfgEntry entries[TEST_CAPACITY];
+    Cfg cfg = {.entries = entries, .capacity = TEST_CAPACITY};
 
     ASSERT(0 == cfg_load("sample.cfg", &cfg, &err));
 
