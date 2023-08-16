@@ -1,10 +1,7 @@
-#include "test.h"
 #include "test_get.h"
 #include "test_load.h"
 #include "test_parse.h"
 #include "test_print.h"
-
-
 
 int
 main(void)
@@ -19,14 +16,15 @@ main(void)
     FILE *stream = stdout;
 #endif
 
-    Scoreboard scoreboard = {0};
-    run_parse_tests(&scoreboard, stream);
-    run_load_tests(&scoreboard, stream);
-    run_get_tests(&scoreboard, stream);
-    run_print_tests(&scoreboard, stream);
+    Scoreboard sb = {0};
+    run_parse_tests(&sb, stream);
+    run_load_tests(&sb, stream);
+    run_get_tests(&sb, stream);
+    run_print_tests(&sb, stream);
 
-    fprintf(stream, "Total: %d Passed: %d Failed: %d\n", scoreboard.total,
-            scoreboard.passed, scoreboard.failed);
+    int total = sb.passed + sb.failed + sb.aborted;
+    fprintf(stream, "Total: %d Passed: %d Failed: %d Aborted: %d\n", total,
+            sb.passed, sb.failed, sb.aborted);
 
 #ifdef LOGFILE
     fclose(stream);

@@ -3,6 +3,26 @@
 
 #include <stdio.h>
 
+// #define LOGFILE
+
+#ifdef LOGFILE
+#define RED
+#define GREEN
+#define RESET
+#else
+#define RED   "\e[1;31m"
+#define GREEN "\e[1;32m"
+#define RESET "\e[0m"
+#endif
+
+#define TEST_CAPACITY 32
+
+typedef struct {
+    int passed;
+    int failed;
+    int aborted;
+} Scoreboard;
+
 typedef enum {
     TEST_PASSED,
     TEST_FAILED,
@@ -12,7 +32,7 @@ typedef enum {
 typedef struct {
     TestResultType type;
     const char *file;
-    int         line;
+    int line;
 } TestResult;
 
 #define ASSERT(X)              \
@@ -23,7 +43,8 @@ typedef struct {
             .line=__LINE__     \
         }
 
-#define OK (TestResult) {.type=TEST_PASSED}
+#define OK (TestResult) {.type=TEST_PASSED, .file=__FILE__, .line=__LINE__}
+#define ABORT (TestResult) {.type=TEST_ABORTED, .file=__FILE__, .line=__LINE__}
 
 #define COUNT_OF(X) (sizeof(X) / sizeof((X)[0]))
 
@@ -33,7 +54,7 @@ typedef struct {
         .count=COUNT_OF(E)     \
     }
 
-void logResult(TestResult result, FILE *stream);
-void updateScoreboard(Scoreboard *scoreboard, TestResult result);
+void log_result(TestResult result, FILE *stream);
+void update_scoreboard(Scoreboard *sb, TestResult result);
 
 #endif

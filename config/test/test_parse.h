@@ -1,9 +1,8 @@
 #ifndef TEST_PARSE_H
 #define TEST_PARSE_H
 
-#include <stdio.h>
-#include "test.h"
+#include "utils.h"
 
-void run_parse_tests(Scoreboard *scoreboard, FILE *stream_);
+void run_parse_tests(Scoreboard *sb, FILE *stream);
 
 #endif

@@ -1,9 +1,8 @@
 #ifndef TEST_GET_H
 #define TEST_GET_H
 
-#include <stdio.h>
-#include "test.h"
+#include "utils.h"
 
-void run_get_tests(Scoreboard *scoreboard, FILE *stream_);
+void run_get_tests(Scoreboard *sb, FILE *stream);
 
 #endif

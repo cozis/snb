@@ -1,9 +1,8 @@
 #ifndef TEST_PRINT_H
 #define TEST_PRINT_H
 
-#include <stdio.h>
-#include "test.h"
+#include "utils.h"
 
-void run_print_tests(Scoreboard *scoreboard, FILE *stream_);
+void run_print_tests(Scoreboard *sb, FILE *stream);
 
 #endif

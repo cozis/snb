@@ -3,7 +3,6 @@
 #include <string.h>
 
 #include "../config.h"
-#include "test.h"
 #include "test_parse.h"
 
 typedef struct {
@@ -433,88 +432,52 @@ static const TestCase test_cases[] = {
     },
 };
 
-static FILE *stream;
-
-static bool
+static TestResult
 assert_eq_entry(const CfgEntry *expected, const CfgEntry *actual)
 {
-    if (expected->type != actual->type) {
-        static const char fmt[] = "Type mismatch in entry \"%s\" between "
-                                  " [expected] and [actual]\n";
-        fprintf(stream, fmt, expected->key);
-        return false;
-    }
-
-    if (strcmp(expected->key, actual->key) != 0) {
-        static const char fmt[] = "Key mismatch in entry \"%s\" between "
-                                  "[expected] and [actual]\n";
-        fprintf(stream, fmt, expected->key);
-        return false;
-    }
+    ASSERT(expected->type == actual->type);
+    ASSERT(0 == strcmp(expected->key, actual->key));
 
     switch (expected->type) {
     case CFG_TYPE_STR:
-        if (!strcmp(expected->val.str, actual->val.str))
-            return true;
+        ASSERT(0 == strcmp(expected->val.str, actual->val.str));
         break;
 
     case CFG_TYPE_INT:
-        if (expected->val.int_ == actual->val.int_)
-            return true;
+        ASSERT(expected->val.int_ == actual->val.int_);
         break;
 
     case CFG_TYPE_FLOAT:
-        if (expected->val.float_ == actual->val.float_)
-            return true;
+        ASSERT(expected->val.float_ == actual->val.float_);
         break;
 
     case CFG_TYPE_BOOL:
-        if (expected->val.bool_ == actual->val.bool_)
-            return true;
+        ASSERT(expected->val.bool_ == actual->val.bool_);
         break;
 
     case CFG_TYPE_COLOR:
-        if (!memcmp(&expected->val.color, &actual->val.color, sizeof(CfgColor)))
-            return true;
+        ASSERT(0 ==
+               memcmp(&expected->val.color, &actual->val.color, sizeof(CfgColor)));
         break;
-
-    default:
-        fprintf(stderr, "FATAL: unknown CfgEntry type\n");
-        exit(1);
     }
 
-    static const char fmt[] = "Value mismatch in entry \"%s\" between "
-                              "[expected] and [actual].\n";
-    fprintf(stream, fmt, expected->key);
-    return false;
+    return OK;
 }
 
-static bool
+static TestResult
 assert_eq_entries(const TestCase tc, const CfgEntry *actual_entries)
 {
     for (int i = 0; i < tc.expected_count; i++) {
-        if (!assert_eq_entry(&tc.expected_entries[i], &actual_entries[i]))
-            return false;
+        TestResult result =
+            assert_eq_entry(&tc.expected_entries[i], &actual_entries[i]);
+        if (result.type != TEST_PASSED)
+            return result;
     }
-    return true;
+    return OK;
 }
 
-static void
-log_result(TestCase tc, bool failed)
-{
-    char *prefix = tc.type ? "ERROR   CASE" : "SUCCESS CASE";
-
-    if (failed) {
-        fprintf(stream, "%s - " RED "FAILED " RESET "(%s:%d)\n", prefix, __FILE__,
-                tc.line);
-    } else {
-        fprintf(stream, "%s - " GREEN "PASSED " RESET "(%s:%d)\n", prefix, __FILE__,
-                tc.line);
-    }
-}
-
-static void
-run_test_case(TestCase tc, Scoreboard *scoreboard)
+static TestResult
+run_test_case(TestCase tc)
 {
     Cfg cfg;
     CfgEntry entries[TEST_CAPACITY];
@@ -527,61 +490,28 @@ run_test_case(TestCase tc, Scoreboard *scoreboard)
 
     switch (tc.type) {
     case TC_SUCC:
-        if (res != 0) {
-            // SUCCESS CASE - FAILED (failed parsing)
-            cfg_fprint_error(stream, &err);
-            log_result(tc, true);
-            scoreboard->failed++;
-        } else {
-            if (tc.expected_count != cfg.count) {
-                // SUCCESS CASE - FAILED (entries count mismatch)
-                fprintf(stream, "Count mismatch between [expected] and [actual]\n");
-                log_result(tc, true);
-                scoreboard->failed++;
-            } else if (!assert_eq_entries(tc, cfg.entries)) {
-                // SUCCESS CASE - FAILED (entries mismatch)
-                log_result(tc, true);
-                scoreboard->failed++;
-            } else {
-                // SUCCESS CASE - PASSED
-                log_result(tc, false);
-                scoreboard->passed++;
-            }
-        }
-        break;
+        ASSERT(res == 0);
+        ASSERT(tc.expected_count == cfg.count);
+        return assert_eq_entries(tc, cfg.entries);
 
     case TC_ERR:
-        if (res == 0) {
-            // ERROR CASE - FAILED (successful parsing)
-            fprintf(stream, "Error case was parsed successfully\n");
-            log_result(tc, true);
-            scoreboard->failed++;
-        } else {
-            if (strcmp(tc.expected_error, err.msg) != 0) {
-                // ERROR CASE - FAILED (error message mismatch)
-                fprintf(stream, "Error message mismatch between "
-                                "[expected] and [actual]\n");
-                log_result(tc, false);
-                scoreboard->failed++;
-            } else {
-                // ERROR CASE - PASSED
-                log_result(tc, false);
-                scoreboard->passed++;
-            }
-        }
+        ASSERT(res != 0);
+        ASSERT(0 == strcmp(tc.expected_error, err.msg));
         break;
     }
+
+    return OK;
 }
 
 void
-run_parse_tests(Scoreboard *scoreboard, FILE *stream_)
+run_parse_tests(Scoreboard *sb, FILE *stream)
 {
-    stream = stream_;
-
+    TestResult result;
     int total = sizeof(test_cases) / sizeof(test_cases[0]);
-    scoreboard->total += total;
 
     for (int i = 0; i < total; i++) {
-        run_test_case(test_cases[i], scoreboard);
+        result = run_test_case(test_cases[i]);
+        update_scoreboard(sb, result);
+        log_result(result, stream);
     }
 }
