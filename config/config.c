@@ -14,100 +14,100 @@ typedef struct {
 } Scanner;
 
 static void
-init_scanner(Scanner *scanner, const char *src, int src_len)
+init_scanner(Scanner *s, const char *src, int src_len)
 {
-    scanner->src = src;
-    scanner->len = src_len;
-    scanner->cur = 0;
+    s->src = src;
+    s->len = src_len;
+    s->cur = 0;
 }
 
 static bool
-is_at_end(Scanner *scanner)
+is_at_end(Scanner *s)
 {
-    return scanner->cur >= scanner->len;
+    return s->cur >= s->len;
 }
 
 static int
-cur(Scanner *scanner)
+cur(Scanner *s)
 {
-    return scanner->cur;
+    return s->cur;
 }
 
 static char
-peek(Scanner *scanner)
+peek(Scanner *s)
 {
-    return scanner->src[scanner->cur];
+    return s->src[s->cur];
 }
 
 static char
-peek_next(Scanner *scanner)
+peek_next(Scanner *s)
 {
-    if (scanner->cur >= scanner->len - 1)
+    if (s->cur >= s->len - 1)
         return '\0';
-    return scanner->src[scanner->cur + 1];
+    return s->src[s->cur + 1];
 }
 
 static char
-advance(Scanner *scanner)
+advance(Scanner *s)
 {
-    return scanner->src[scanner->cur++];
+    return s->src[s->cur++];
 }
 
 static char
-advance2(Scanner *scanner, int n)
+advance2(Scanner *s, int n)
 {
     for (int i = 0; i < n - 1; i++)
-        advance(scanner);
-    return advance(scanner);
+        advance(s);
+    return advance(s);
 }
 
 static void
-skip_whitespace(Scanner *scanner)
+skip_whitespace(Scanner *s)
 {
-    while (!is_at_end(scanner) && isspace(peek(scanner)))
-        advance(scanner);
+    while (!is_at_end(s) && isspace(peek(s)))
+        advance(s);
 }
 
 static void
-skip_blank(Scanner *scanner)
+skip_blank(Scanner *s)
 {
-    while (!is_at_end(scanner) && isspace(peek(scanner)) && peek(scanner) != '\n')
-        advance(scanner);
+    while (!is_at_end(s) && isspace(peek(s)) && peek(s) != '\n')
+        advance(s);
 }
 
 static void
-skip_comment(Scanner *scanner)
+skip_comment(Scanner *s)
 {
-    while (!is_at_end(scanner) && peek(scanner) == '#') {
+    while (!is_at_end(s) && peek(s) == '#') {
         do
-            advance(scanner);
-        while (!is_at_end(scanner) && peek(scanner) != '\n');
+            advance(s);
+        while (!is_at_end(s) && peek(s) != '\n');
     }
 }
 
 void
-skip_whitespace_and_comments(Scanner *scanner)
+skip_whitespace_and_comments(Scanner *s)
 {
-    while (!is_at_end(scanner) && (isspace(peek(scanner)) || peek(scanner) == '#')) {
-        skip_whitespace(scanner);
-        skip_comment(scanner);
+    while (!is_at_end(s) && (isspace(peek(s)) || peek(s) == '#')) {
+        skip_whitespace(s);
+        skip_comment(s);
     }
 }
 
 static void
-copy_slice_into(Scanner *scanner, int src_off, int src_len, char *dst, int max)
+copy_slice_into(Scanner *s, int src_off, int src_len, char *dst, int max)
 {
     assert(src_len < max);
-    memcpy(dst, scanner->src + src_off, src_len);
+    memcpy(dst, s->src + src_off, src_len);
     dst[src_len] = '\0';
 }
 
 static bool
-match_literal(Scanner *scanner, int offset, const char *literal, int len)
+match_literal(Scanner *s, int offset, const char *literal, int len)
 {
-    if (offset + len > scanner->len)
+    if (offset + len > s->len)
         return false;
-    return !strncmp(scanner->src + offset, literal, len);
+    return !strncmp(s->src + offset, literal, len);
 }
 
 static bool
@@ -132,17 +132,17 @@ init_error(CfgError *err)
 }
 
 static int
-error(Scanner *scanner, CfgError *err, const char *fmt, ...)
+error(Scanner *s, CfgError *err, const char *fmt, ...)
 {
     const char prefix[] = "";
     const int prefix_len = sizeof(prefix) - 1;
 
-    err->off = cur(scanner);
+    err->off = cur(s);
     err->row = 1;
     err->col = 1;
-    for (int i = 0; i < cur(scanner); i++) {
+    for (int i = 0; i < cur(s); i++) {
         err->col++;
-        if (scanner->src[i] == '\n') {
+        if (s->src[i] == '\n') {
             err->row++;
             err->col = 1;
         }
@@ -150,10 +150,10 @@ error(Scanner *scanner, CfgError *err, const char *fmt, ...)
 
 #ifdef CFG_DETAILED_ERRORS
     {
-        const char *src = scanner->src;
+        const char *src = s->src;
 
         // Get line offset containing the error's location
-        int line_off = cur(scanner);
+        int line_off = cur(s);
 
         while (line_off > 0) {
             if (src[line_off - 1] == '\n')
@@ -162,7 +162,7 @@ error(Scanner *scanner, CfgError *err, const char *fmt, ...)
         }
 
         int line_len = 0;
-        for (int i = line_off; i < scanner->len; i++) {
+        for (int i = line_off; i < s->len; i++) {
             if (src[i] == '\n') {
                 if (i > 0 && src[i - 1] == '\r')
                     line_len--;
@@ -190,7 +190,7 @@ error(Scanner *scanner, CfgError *err, const char *fmt, ...)
         int next_line_off;
         int next_line_len;
 
-        if (line_off + line_len == scanner->len) {
+        if (line_off + line_len == s->len) {
             next_line_off = 0;
             next_line_len = 0;
         } else {
@@ -198,7 +198,7 @@ error(Scanner *scanner, CfgError *err, const char *fmt, ...)
             if (src[next_line_off] == '\n')
                 next_line_off++;
             next_line_len = 0;
-            while (next_line_off + next_line_len < scanner->len &&
+            while (next_line_off + next_line_len < s->len &&
                    src[next_line_off + next_line_len] != '\n')
                 next_line_len++;
         }
@@ -261,54 +261,53 @@ cfg_fprint_error(FILE *stream, CfgError *err)
 }
 
 static int
-parse_string(Scanner *scanner, CfgEntry *entry, CfgError *err)
+parse_string(Scanner *s, CfgEntry *entry, CfgError *err)
 {
     // Consume opening '"'
-    advance(scanner);
+    advance(s);
 
     // Consume string
-    int val_offset = cur(scanner);
-    while (!is_at_end(scanner) && is_string(peek(scanner)))
-        advance(scanner);
+    int val_offset = cur(s);
+    while (!is_at_end(s) && is_string(peek(s)))
+        advance(s);
 
-    if (is_at_end(scanner) || peek(scanner) != '"')
-        return error(scanner, err, "closing '\"' expected");
+    if (is_at_end(s) || peek(s) != '"')
+        return error(s, err, "closing '\"' expected");
 
-    int val_len = cur(scanner) - val_offset;
+    int val_len = cur(s) - val_offset;
     if (val_len > CFG_MAX_VAL)
-        return error(scanner, err, "value too long");
+        return error(s, err, "value too long");
 
     // Consume closing '"'
-    advance(scanner);
+    advance(s);
 
-    copy_slice_into(scanner, val_offset, val_len, entry->val.str,
-                    sizeof(entry->val.str));
+    copy_slice_into(s, val_offset, val_len, entry->val.str, sizeof(entry->val.str));
     entry->type = CFG_TYPE_STR;
     return 0;
 }
 
 static int
-consume_number(Scanner *scanner, float *number, bool *is_int)
+consume_number(Scanner *s, float *number, bool *is_int)
 {
     bool is_float = false;
     int sign = 1;
     int int_part = 0;
     float fract_part = 0;
 
-    if (!is_at_end(scanner) && peek(scanner) == '-' && isdigit(peek_next(scanner))) {
+    if (!is_at_end(s) && peek(s) == '-' && isdigit(peek_next(s))) {
         // Consume '-'
-        advance(scanner);
+        advance(s);
         sign = -1;
     }
 
-    if (!is_at_end(scanner) && !isdigit(peek(scanner)))
+    if (!is_at_end(s) && !isdigit(peek(s)))
         return -1;
 
-    while (!is_at_end(scanner) && isdigit(peek(scanner)))
-        int_part = int_part * 10 + (advance(scanner) - '0');
+    while (!is_at_end(s) && isdigit(peek(s)))
+        int_part = int_part * 10 + (advance(s) - '0');
 
-    if (!is_at_end(scanner) && peek(scanner) == '.') {
-        advance(scanner);
+    if (!is_at_end(s) && peek(s) == '.') {
+        advance(s);
         is_float = true;
     }
 
@@ -317,8 +316,8 @@ consume_number(Scanner *scanner, float *number, bool *is_int)
         *number = sign * int_part;
     } else {
         int div = 1;
-        while (!is_at_end(scanner) && isdigit(peek(scanner))) {
-            fract_part = fract_part * 10 + (advance(scanner) - '0');
+        while (!is_at_end(s) && isdigit(peek(s))) {
+            fract_part = fract_part * 10 + (advance(s) - '0');
             div *= 10;
         }
         float float_ = int_part + (fract_part / div);
@@ -330,12 +329,12 @@ consume_number(Scanner *scanner, float *number, bool *is_int)
 }
 
 static int
-parse_number(Scanner *scanner, CfgEntry *entry, CfgError *err)
+parse_number(Scanner *s, CfgEntry *entry, CfgError *err)
 {
     bool is_int;
     float number;
-    if (consume_number(scanner, &number, &is_int) != 0)
-        return error(scanner, err, "number expected");
+    if (consume_number(s, &number, &is_int) != 0)
+        return error(s, err, "number expected");
 
     if (is_int) {
         entry->val.int_ = (int) number;
@@ -349,68 +348,68 @@ parse_number(Scanner *scanner, CfgEntry *entry, CfgError *err)
 }
 
 static int
-parse_rgba(Scanner *scanner, CfgEntry *entry, CfgError *err)
+parse_rgba(Scanner *s, CfgEntry *entry, CfgError *err)
 {
-    if (!match_literal(scanner, cur(scanner), "rgba", 4))
-        return error(scanner, err, "invalid literal");
+    if (!match_literal(s, cur(s), "rgba", 4))
+        return error(s, err, "invalid literal");
 
     // Consume "rgba"
-    advance2(scanner, 4);
+    advance2(s, 4);
 
     // Skip blank space between 'a' and '('
-    skip_blank(scanner);
+    skip_blank(s);
 
-    if (is_at_end(scanner) || peek(scanner) != '(')
-        return error(scanner, err, "'(' expected");
+    if (is_at_end(s) || peek(s) != '(')
+        return error(s, err, "'(' expected");
 
     // Consume '('
-    advance(scanner);
+    advance(s);
 
     bool is_int;
     uint8_t rgb[3];
     for (int i = 0; i < 3; i++) {
         // Skip blank space preceding the number
-        skip_blank(scanner);
+        skip_blank(s);
 
         float number;
-        if (consume_number(scanner, &number, &is_int) != 0)
-            return error(scanner, err, "number expected");
+        if (consume_number(s, &number, &is_int) != 0)
+            return error(s, err, "number expected");
 
         if (!is_int || number < 0 || number > 255)
-            return error(scanner, err,
+            return error(s, err,
                          "red, blue and green must be "
                          "integers in range (0, 255)");
 
         rgb[i] = (uint8_t) number;
 
         // Skip blank space following the number
-        skip_blank(scanner);
+        skip_blank(s);
 
-        if (is_at_end(scanner) || peek(scanner) != ',')
-            return error(scanner, err, "',' expected");
+        if (is_at_end(s) || peek(s) != ',')
+            return error(s, err, "',' expected");
 
         // Consume ','
-        advance(scanner);
+        advance(s);
     }
 
     // Skip blank space preceding the number
-    skip_blank(scanner);
+    skip_blank(s);
 
     float alpha;
-    if (consume_number(scanner, &alpha, &is_int) != 0)
-        return error(scanner, err, "number expected");
+    if (consume_number(s, &alpha, &is_int) != 0)
+        return error(s, err, "number expected");
 
     if (alpha < 0 || alpha > 1)
-        return error(scanner, err, "alpha must be in range (0, 1)");
+        return error(s, err, "alpha must be in range (0, 1)");
 
     // Skip blank space following the number
-    skip_blank(scanner);
+    skip_blank(s);
 
-    if (is_at_end(scanner) || peek(scanner) != ')')
-        return error(scanner, err, "')' expected");
+    if (is_at_end(s) || peek(s) != ')')
+        return error(s, err, "')' expected");
 
     // Consume ')'
-    advance(scanner);
+    advance(s);
 
     CfgColor color = {
         .r = rgb[0],
@@ -424,13 +423,13 @@ parse_rgba(Scanner *scanner, CfgEntry *entry, CfgError *err)
 }
 
 static int
-parse_true(Scanner *scanner, CfgEntry *entry, CfgError *err)
+parse_true(Scanner *s, CfgEntry *entry, CfgError *err)
 {
-    if (!match_literal(scanner, cur(scanner), "true", 4))
-        return error(scanner, err, "invalid literal");
+    if (!match_literal(s, cur(s), "true", 4))
+        return error(s, err, "invalid literal");
 
     // Consume "true"
-    advance2(scanner, 4);
+    advance2(s, 4);
 
     entry->val.bool_ = true;
     entry->type = CFG_TYPE_BOOL;
@@ -438,13 +437,13 @@ parse_true(Scanner *scanner, CfgEntry *entry, CfgError *err)
 }
 
 static int
-parse_false(Scanner *scanner, CfgEntry *entry, CfgError *err)
+parse_false(Scanner *s, CfgEntry *entry, CfgError *err)
 {
-    if (!match_literal(scanner, cur(scanner), "false", 5))
-        return error(scanner, err, "invalid literal");
+    if (!match_literal(s, cur(s), "false", 5))
+        return error(s, err, "invalid literal");
 
     // Consume "false"
-    advance2(scanner, 5);
+    advance2(s, 5);
 
     entry->val.bool_ = false;
     entry->type = CFG_TYPE_BOOL;
@@ -452,100 +451,100 @@ parse_false(Scanner *scanner, CfgEntry *entry, CfgError *err)
 }
 
 static int
-parse_literal(Scanner *scanner, CfgEntry *entry, CfgError *err)
+parse_literal(Scanner *s, CfgEntry *entry, CfgError *err)
 {
-    switch (peek(scanner)) {
+    switch (peek(s)) {
     case 't':
-        return parse_true(scanner, entry, err);
+        return parse_true(s, entry, err);
     case 'f':
-        return parse_false(scanner, entry, err);
+        return parse_false(s, entry, err);
     case 'r':
-        return parse_rgba(scanner, entry, err);
+        return parse_rgba(s, entry, err);
     default:
-        return error(scanner, err, "invalid literal");
+        return error(s, err, "invalid literal");
     }
 }
 
 static int
-parse_value(Scanner *scanner, CfgEntry *entry, CfgError *err)
+parse_value(Scanner *s, CfgEntry *entry, CfgError *err)
 {
     // Skip blank space between ':' and the value
-    skip_blank(scanner);
+    skip_blank(s);
 
-    if (is_at_end(scanner) || peek(scanner) == '\n')
-        return error(scanner, err, "missing value");
+    if (is_at_end(s) || peek(s) == '\n')
+        return error(s, err, "missing value");
 
     // Consume value
-    char c = peek(scanner);
+    char c = peek(s);
 
     if (c == '"')
-        return parse_string(scanner, entry, err);
+        return parse_string(s, entry, err);
     else if (isalpha(c))
-        return parse_literal(scanner, entry, err);
-    else if (isdigit(c) || (c == '-' && isdigit(peek_next(scanner))))
-        return parse_number(scanner, entry, err);
+        return parse_literal(s, entry, err);
+    else if (isdigit(c) || (c == '-' && isdigit(peek_next(s))))
+        return parse_number(s, entry, err);
     else
-        return error(scanner, err, "invalid value");
+        return error(s, err, "invalid value");
 }
 
 static int
-parse_key(Scanner *scanner, CfgEntry *entry, CfgError *err)
+parse_key(Scanner *s, CfgEntry *entry, CfgError *err)
 {
-    if (is_at_end(scanner) || !is_key(peek(scanner)))
-        return error(scanner, err, "missing key");
+    if (is_at_end(s) || !is_key(peek(s)))
+        return error(s, err, "missing key");
 
     // Consume key
-    int key_offset = cur(scanner);
+    int key_offset = cur(s);
     do
-        advance(scanner);
-    while (!is_at_end(scanner) && is_key(peek(scanner)));
-    int key_len = cur(scanner) - key_offset;
+        advance(s);
+    while (!is_at_end(s) && is_key(peek(s)));
+    int key_len = cur(s) - key_offset;
 
     if (key_len > CFG_MAX_KEY)
-        return error(scanner, err, "key too long");
+        return error(s, err, "key too long");
 
-    copy_slice_into(scanner, key_offset, key_len, entry->key, sizeof(entry->key));
+    copy_slice_into(s, key_offset, key_len, entry->key, sizeof(entry->key));
     return 0;
 }
 
 static int
-consume_colon(Scanner *scanner, CfgError *err)
+consume_colon(Scanner *s, CfgError *err)
 {
     // Skip blank space between the key and ':'
-    skip_blank(scanner);
+    skip_blank(s);
 
-    if (is_at_end(scanner) || peek(scanner) != ':')
-        return error(scanner, err, "':' expected");
+    if (is_at_end(s) || peek(s) != ':')
+        return error(s, err, "':' expected");
 
     // Consume ':'
-    advance(scanner);
+    advance(s);
     return 0;
 }
 
 static int
-parse_entry(Scanner *scanner, CfgEntry *entry, CfgError *err)
+parse_entry(Scanner *s, CfgEntry *entry, CfgError *err)
 {
-    if (parse_key(scanner, entry, err) != 0)
+    if (parse_key(s, entry, err) != 0)
         return -1;
 
-    if (consume_colon(scanner, err) != 0)
+    if (consume_colon(s, err) != 0)
         return -1;
 
-    if (parse_value(scanner, entry, err) != 0)
+    if (parse_value(s, entry, err) != 0)
         return -1;
 
     // Skip trailing blank space after the value
-    skip_blank(scanner);
+    skip_blank(s);
 
-    if (!is_at_end(scanner) && peek(scanner) == '#')
-        skip_comment(scanner);
+    if (!is_at_end(s) && peek(s) == '#')
+        skip_comment(s);
 
-    if (!is_at_end(scanner) && peek(scanner) != '\n')
-        return error(scanner, err, "unexpected character '%c'", peek(scanner));
+    if (!is_at_end(s) && peek(s) != '\n')
+        return error(s, err, "unexpected character '%c'", peek(s));
 
     // Consume '\n'
-    if (!is_at_end(scanner))
-        advance(scanner);
+    if (!is_at_end(s))
+        advance(s);
 
     return 0;
 }
@@ -561,21 +560,21 @@ cfg_init(Cfg *cfg, CfgEntry *entries, int capacity)
 int
 cfg_parse(const char *src, int src_len, Cfg *cfg, CfgError *err)
 {
-    Scanner scanner;
-    init_scanner(&scanner, src, src_len);
+    Scanner s;
+    init_scanner(&s, src, src_len);
     init_error(err);
 
     cfg->count = 0;
-    skip_whitespace_and_comments(&scanner);
+    skip_whitespace_and_comments(&s);
 
-    while (!is_at_end(&scanner) && cfg->count < cfg->capacity) {
+    while (!is_at_end(&s) && cfg->count < cfg->capacity) {
         CfgEntry *entry = &cfg->entries[cfg->count];
 
-        if (parse_entry(&scanner, entry, err) != 0)
+        if (parse_entry(&s, entry, err) != 0)
             return -1;
 
         cfg->count++;
-        skip_whitespace_and_comments(&scanner);
+        skip_whitespace_and_comments(&s);
     }
 
     return 0;
