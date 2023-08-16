@@ -252,8 +252,8 @@ cfg_fprint_error(FILE *stream, CfgError *err)
     if (err->row > 0)
         fprintf(stream, "%4d | %s %s\n", err->row - 1, err->lines[0],
                 err->truncated[0] ? "[...]" : "");
-    fprintf(stream, "%4d | %s %s <------ Error is here!\n", err->row, err->lines[1],
-            err->truncated[1] ? "[...]" : "");
+    fprintf(stream, "%4d | %s %s <------ Error is here!\n", err->row,
+            err->lines[1], err->truncated[1] ? "[...]" : "");
     fprintf(stream, "%4d | %s %s\n", err->row + 1, err->lines[2],
             err->truncated[2] ? "[...]" : "");
     fprintf(stream, "\n");
@@ -281,7 +281,8 @@ parse_string(Scanner *s, CfgEntry *entry, CfgError *err)
     // Consume closing '"'
     advance(s);
 
-    copy_slice_into(s, val_offset, val_len, entry->val.str, sizeof(entry->val.str));
+    copy_slice_into(s, val_offset, val_len, entry->val.str,
+                    sizeof(entry->val.str));
     entry->type = CFG_TYPE_STR;
     return 0;
 }
@@ -712,7 +713,11 @@ cfg_get_float_max(Cfg *cfg, const char *key, float default_, float max)
 }
 
 float
-cfg_get_float_range(Cfg *cfg, const char *key, float default_, float min, float max)
+cfg_get_float_range(Cfg *cfg,
+                    const char *key,
+                    float default_,
+                    float min,
+                    float max)
 {
     float value = cfg_get_float(cfg, key, default_);
     if (value < min || value > max)
@@ -737,7 +742,8 @@ cfg_fprint(FILE *stream, Cfg *cfg)
             fprintf(stream, "\"%s\"\n", cfg->entries[i].val.str);
             break;
         case CFG_TYPE_BOOL:
-            fprintf(stream, "%s\n", cfg->entries[i].val.bool_ ? "true" : "false");
+            fprintf(stream, "%s\n",
+                    cfg->entries[i].val.bool_ ? "true" : "false");
             break;
         case CFG_TYPE_INT:
             fprintf(stream, "%d\n", cfg->entries[i].val.int_);

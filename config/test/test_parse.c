@@ -65,7 +65,9 @@ static const TestCase test_cases[] = {
         .capacity = TEST_CAPACITY,
         .expected_entries =
             (CfgEntry[]){
-                {.key = "key", .type = CFG_TYPE_STR, .val.str = "hello, world!"},
+                {.key = "key",
+                 .type = CFG_TYPE_STR,
+                 .val.str = "hello, world!"},
             },
         .expected_count = 1,
     },
@@ -122,7 +124,8 @@ static const TestCase test_cases[] = {
             (CfgEntry[]){
                 {.key = "key",
                  .type = CFG_TYPE_COLOR,
-                 .val.color = (CfgColor){.r = 255, .g = 255, .b = 255, .a = 255}},
+                 .val.color =
+                     (CfgColor){.r = 255, .g = 255, .b = 255, .a = 255}},
             },
         .expected_count = 1,
     },
@@ -358,28 +361,32 @@ static const TestCase test_cases[] = {
         .line = __LINE__,
         .src = "key: rgba(0.5",
         .capacity = TEST_CAPACITY,
-        .expected_error = "red, blue and green must be integers in range (0, 255)",
+        .expected_error =
+            "red, blue and green must be integers in range (0, 255)",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: rgba(-1",
         .capacity = TEST_CAPACITY,
-        .expected_error = "red, blue and green must be integers in range (0, 255)",
+        .expected_error =
+            "red, blue and green must be integers in range (0, 255)",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: rgba(-1",
         .capacity = TEST_CAPACITY,
-        .expected_error = "red, blue and green must be integers in range (0, 255)",
+        .expected_error =
+            "red, blue and green must be integers in range (0, 255)",
     },
     {
         .type = TC_ERR,
         .line = __LINE__,
         .src = "key: rgba(256",
         .capacity = TEST_CAPACITY,
-        .expected_error = "red, blue and green must be integers in range (0, 255)",
+        .expected_error =
+            "red, blue and green must be integers in range (0, 255)",
     },
     {
         .type = TC_ERR,
@@ -456,8 +463,8 @@ assert_eq_entry(const CfgEntry *expected, const CfgEntry *actual)
         break;
 
     case CFG_TYPE_COLOR:
-        ASSERT(0 ==
-               memcmp(&expected->val.color, &actual->val.color, sizeof(CfgColor)));
+        ASSERT(0 == memcmp(&expected->val.color, &actual->val.color,
+                           sizeof(CfgColor)));
         break;
     }
 
