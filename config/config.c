@@ -546,6 +546,7 @@ parse_entry(Scanner *scanner, CfgEntry *entry, CfgError *err)
     // Consume '\n'
     if (!is_at_end(scanner))
         advance(scanner);
+
     return 0;
 }
 
@@ -585,7 +586,7 @@ read_file(const char *filename, int *count, char *err)
 {
     FILE *file = fopen(filename, "rb");
     if (!file) {
-        snprintf(err, CFG_MAX_ERR, "failed to open the file");
+        snprintf(err, CFG_MAX_ERR, "failed to open file");
         return NULL;
     }
 
@@ -604,7 +605,7 @@ read_file(const char *filename, int *count, char *err)
 
     if (bytes_read != file_size) {
         free(src);
-        snprintf(err, CFG_MAX_ERR, "failed to read the file");
+        snprintf(err, CFG_MAX_ERR, "failed to read file");
         return NULL;
     }
 
